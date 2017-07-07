@@ -27,8 +27,7 @@ BiocStyle::markdown()
 options(width=100, max.print=1000)
 knitr::opts_chunk$set(
     eval=as.logical(Sys.getenv("KNITR_EVAL", "TRUE")),
-#     cache=as.logical(Sys.getenv("KNITR_CACHE", "TRUE")))
-    cache=FALSE)
+    cache=as.logical(Sys.getenv("KNITR_CACHE", "TRUE")))
 ```
 
 ```{r setup, echo=FALSE, messages=FALSE, warnings=FALSE}
@@ -42,73 +41,7 @@ suppressPackageStartupMessages({
     library(GenomicAlignments)
     library(ShortRead)
     library(ape)
-    library(clusterProfiler)
 })
-```
-```{r try.clusterProfiler.pdf.pg5.compareCluster, eval=F}
-# takes time 2:25
-
-
-
-## Not run:
-data(gcSample)
-xx <- compareCluster(gcSample, fun="enrichKEGG",
-organism="hsa", pvalueCutoff=0.05)
-as.data.frame(xx)
-# plot(xx, type="dot", caption="KEGG Enrichment Comparison")
-## formula interface
-mydf <- data.frame(Entrez=c('1', '100', '1000', '100101467',
-'100127206', '100128071'),
-group = c('A', 'A', 'A', 'B', 'B', 'B'),
-othergroup = c('good', 'good', 'bad', 'bad', 'good', 'bad'))
-xx.formula <- compareCluster(Entrez~group, data=mydf,
-fun='groupGO', OrgDb='org.Hs.eg.db')
-as.data.frame(xx.formula) # takes a minute or so
-## formula interface with more than one grouping variable
-xx.formula.twogroups <- compareCluster(Entrez~group+othergroup, data=mydf,
-fun='groupGO', OrgDb='org.Hs.eg.db')
-as.data.frame(xx.formula.twogroups) # takes a minute or so
-## End(Not run)
-
-
-```
-```{r try.clusterProfiler.pdf.pg11.enrichGO, eval=F}
-# takes time :40
-
-## Not run:
-data(geneList)
-de <- names(geneList)[1:100]
-yy <- enrichGO(de, 'org.Hs.eg.db', ont="BP", pvalueCutoff=0.01)
-head(yy)
-## End(Not run)
-
-
-```
-```{r try.clusterProfiler.pdf.pg12.enrichKEGG, eval=T}
-# takes time <:03
-
-## Not run:
-data(geneList)
-de <- names(geneList)[1:100]
-yy <- enrichKEGG(de, pvalueCutoff=0.01)
-head(yy)
-plot(yy) # where does this output to?
-## End(Not run)
-
-
-```
-```{r try.clusterProfiler.pdf.pg16.groupGO, eval=F}
-# takes time :30
-
-## Not run:
-data(gcSample)
-yy <- groupGO(gcSample[[1]], 'org.Hs.eg.db', ont="BP", level=2)
-head(summary(yy))
-#plot(yy)
-
-## End(Not run)
-
-
 ```
 Note: the most recent version of this tutorial can be found <a href="https://htmlpreview.github.io/?https://github.com/tgirke/systemPipeR/blob/master/vignettes/systemPipeRNAseq.html">here</a> and a short overview slide show [here](https://htmlpreview.github.io/?https://github.com/tgirke/systemPipeR/master/inst/extdata/slides/systemPipeRslides.html).
 
@@ -177,7 +110,7 @@ R
 
 Now check whether your R session is running on a computer node of the cluster and not on a head node.
 
-```{r r_environment, eval=T}
+```{r r_environment, eval=FALSE}
 system("hostname") # should return name of a compute node starting with i or c 
 getwd() # checks current working directory of R session
 dir() # returns content of current working directory
@@ -195,7 +128,7 @@ library(systemPipeR)
 If applicable load custom functions not provided by
 
 ```{r source_helper_fcts, eval=FALSE}
-source("systemPipeRNAseq_Fct.R")
+source("systemPipeRNAseq_Fct_GM.R")
 ```
 ## Experiment definition provided by `targets` file
 
@@ -223,7 +156,7 @@ The new targets file can be used for the next workflow step with an updated
 `SYSargs` instance, _e.g._ running the NGS alignments using the
 trimmed FASTQ files.
 
-```{r fastq_filter, eval=F}
+```{r fastq_filter, eval=FALSE}
 args <- systemArgs(sysma="param/trim.param", mytargets="targets.txt")
 preprocessReads(args=args, Fct="trimLRPatterns(Rpattern='GCCCGGGTAA', subject=fq)",
                 batchsize=100000, overwrite=TRUE, compress=TRUE)
@@ -239,7 +172,7 @@ diversity, length and occurrence distribution of reads, number of reads
 above quality cutoffs and mean quality distribution. The results are
 written to a PDF file named `fastqReport.pdf`.
 
-```{r fastq_report, eval=F}
+```{r fastq_report, eval=FALSE}
 args <- systemArgs(sysma="param/tophat.param", mytargets="targets.txt")
 # 6 minutes
 fqlist <- seeFastq(fastq=infile1(args), batchsize=100000, klength=8)
@@ -260,7 +193,7 @@ The NGS reads of this project will be aligned against the reference
 genome sequence using `Bowtie2/TopHat2` [@Kim2013-vg; @Langmead2012-bs]. The parameter 
 settings of the aligner are defined in the `tophat.param` file.
 
-```{r tophat_alignment1, eval=T}
+```{r tophat_alignment1, eval=FALSE}
 args <- systemArgs(sysma="param/tophat.param", mytargets="targets.txt")
 sysargs(args)[1] # Command-line parameters for first FASTQ file
 ```
@@ -269,7 +202,7 @@ sysargs(args)[1] # Command-line parameters for first FASTQ file
 Submission of alignment jobs to compute cluster, here using 72 CPU cores
 (18 `qsub` processes each with 4 CPU cores).
 
-```{r tophat_alignment2, eval=F}
+```{r tophat_alignment2, eval=FALSE}
 moduleload(modules(args))
 system("bowtie2-build ./data/tair10.fasta ./data/tair10.fasta")
 resources <- list(walltime="01:00:00", ntasks=1, ncpus=cores(args), memory="10G")
@@ -282,7 +215,7 @@ waitForJobs(reg)
 
 ## Read mapping with `HISAT2`
 
-```{r hisat_alignment2, eval=F}
+```{r hisat_alignment2, eval=FALSE}
 args <- systemArgs(sysma="param/hisat2.param", mytargets="targets.txt")
 sysargs(args)[1] # Command-line parameters for first FASTQ file
 moduleload(modules(args))
@@ -297,7 +230,7 @@ waitForJobs(reg)
 
 Check whether all BAM files have been created
 
-```{r check_files_exist, eval=T}
+```{r check_files_exist, eval=FALSE}
 file.exists(outpaths(args))
 ```
 
@@ -306,7 +239,7 @@ file.exists(outpaths(args))
 The following provides an overview of the number of reads in each sample
 and how many of them aligned to the reference.
 
-```{r align_stats, eval=T}
+```{r align_stats, eval=FALSE}
 read_statsDF <- alignStats(args=args) 
 write.table(read_statsDF, "results/alignStats.xls", row.names=FALSE, quote=FALSE, sep="\t")
 ```
@@ -324,7 +257,7 @@ The `symLink2bam` function creates symbolic links to view the BAM alignment file
 genome browser such as IGV. The corresponding URLs are written to a file
 with a path specified under `urlfile` in the `results` directory.
 
-```{r bam_urls, eval=F}
+```{r bam_urls, eval=FALSE}
 symLink2bam(sysargs=args, htmldir=c("~/.html/", "somedir/"), 
             urlbase="http://biocluster.ucr.edu/~tgirke/", 
 	        urlfile="./results/IGVurl.txt")
@@ -345,7 +278,7 @@ RPKM table (`rpkmDFeByg.xls`) are written
 to separate files in the directory of this project. Parallelization is
 achieved with the `BiocParallel` package, here using 8 CPU cores.
 
-```{r read_counting1, eval=F}
+```{r read_counting1, eval=FALSE}
 library("GenomicFeatures"); library(BiocParallel)
 txdb <- makeTxDbFromGFF(file="data/tair10.gff", format="gff", dataSource="TAIR", organism="Arabidopsis thaliana")
 saveDb(txdb, file="./data/tair10.sqlite")
@@ -366,13 +299,13 @@ write.table(rpkmDFeByg, "results/rpkmDFeByg.xls", col.names=NA, quote=FALSE, sep
 ```
 
 Sample of data slice of count table
-```{r view_counts, eval=T}
+```{r view_counts, eval=FALSE}
 read.delim("results/countDFeByg.xls", row.names=1, check.names=FALSE)[1:4,1:5]
 ```
 
 Sample of data slice of RPKM table
 
-```{r view_rpkm, eval=T}
+```{r view_rpkm, eval=FALSE}
 read.delim("results/rpkmDFeByg.xls", row.names=1, check.names=FALSE)[1:4,1:4]
 ```
 
@@ -390,7 +323,7 @@ transformation to a distance matrix, hierarchical clustering is performed with
 the `hclust` function and the result is plotted as a dendrogram
 (also see file `sample_tree.pdf`).
 
-```{r sample_tree, eval=T}
+```{r sample_tree, eval=FALSE}
 library(DESeq2, quietly=TRUE); library(ape,  warn.conflicts=FALSE)
 countDF <- as.matrix(read.table("./results/countDFeByg.xls"))
 colData <- data.frame(row.names=targetsin(args)$SampleName, condition=targetsin(args)$Factor)
@@ -415,7 +348,7 @@ comparisons used by this analysis are defined in the header lines of the
 
 ## Run `edgeR`
 
-```{r run_edger, eval=T}
+```{r run_edger, eval=FALSE}
 library(edgeR)
 countDF <- read.delim("results/countDFeByg.xls", row.names=1, check.names=FALSE) 
 targets <- read.delim("targets.txt", comment="#")
@@ -425,11 +358,10 @@ edgeDF <- run_edgeR(countDF=countDF, targets=targets, cmp=cmp[[1]], independent=
 
 Add gene descriptions
 
-```{r custom_annot, eval=T} # useMart() call fails
+```{r custom_annot, eval=FALSE}
 library("biomaRt")
-# m <- useMart("plants_mart", dataset="athaliana_eg_gene", host="plants.ensembl.org")
-m <- useMart("ensembl", dataset="xmaculatus_gene_ensembl", host="ensembl.org")
-desc <- getBM(attributes=c("band", "description"), mart=m)
+m <- useMart("plants_mart", dataset="athaliana_eg_gene", host="plants.ensembl.org")
+desc <- getBM(attributes=c("tair_locus", "description"), mart=m)
 desc <- desc[!duplicated(desc[,1]),]
 descv <- as.character(desc[,2]); names(descv) <- as.character(desc[,1])
 edgeDF <- data.frame(edgeDF, Desc=descv[rownames(edgeDF)], check.names=FALSE)
@@ -442,7 +374,7 @@ Filter and plot DEG results for up and down regulated genes. The
 definition of *up* and *down* is given in the corresponding help
 file. To open it, type `?filterDEGs` in the R console.
 
-```{r filter_degs, eval=T}
+```{r filter_degs, eval=FALSE}
 edgeDF <- read.delim("results/edgeRglm_allcomp.xls", row.names=1, check.names=FALSE) 
 pdf("results/DEGcounts.pdf")
 DEG_list <- filterDEGs(degDF=edgeDF, filter=c(Fold=2, FDR=20))
@@ -462,7 +394,7 @@ comparisons with the same number of sample sets in a single Venn diagram
 (here for 4 up and down DEG sets).
 
 
-```{r venn_diagram, eval=T}
+```{r venn_diagram, eval=FALSE}
 vennsetup <- overLapper(DEG_list$Up[6:9], type="vennsets")
 vennsetdown <- overLapper(DEG_list$Down[6:9], type="vennsets")
 pdf("results/vennplot.pdf")
@@ -486,16 +418,15 @@ For each annotation this relatively slow preprocessing step needs to be
 performed only once. Subsequently, the preprocessed data can be loaded
 with the `load` function as shown in the next subsection.
 
-```{r get_go_annot, eval=T} # useMart() fails
+```{r get_go_annot, eval=FALSE}
 library("biomaRt")
 listMarts() # To choose BioMart database
 listMarts(host="plants.ensembl.org")
-m <- useMart("ensembl", host="ensembl.org")
+m <- useMart("plants_mart", host="plants.ensembl.org")
 listDatasets(m)
-m <- useMart("ensembl", dataset="xmaculatus_gene_ensembl", host="ensembl.org")
+m <- useMart("plants_mart", dataset="athaliana_eg_gene", host="plants.ensembl.org")
 listAttributes(m) # Choose data types you want to download
-# go <- getBM(attributes=c("go_id", "tair_locus", "name_1006"), mart=m)
-go <- getBM(attributes=c("go_id", "band", "name_1006"), mart=m)
+go <- getBM(attributes=c("go_id", "tair_locus", "name_1006"), mart=m)
 go <- go[go[,3]!="",]; go[,3] <- as.character(go[,3])
 go[go[,3]=="molecular_function", 3] <- "F"; go[go[,3]=="biological_process", 3] <- "P"; go[go[,3]=="cellular_component", 3] <- "C"
 go[1:4,]
@@ -518,8 +449,7 @@ example shows how a GO slim vector for a specific organism can be obtained from
 BioMart.
 
 
-```{r go_enrich, eval=F}
-# takes time :45
+```{r go_enrich, eval=FALSE}
 library("biomaRt")
 load("data/GO/catdb.RData")
 DEG_list <- filterDEGs(degDF=edgeDF, filter=c(Fold=2, FDR=50), plot=FALSE)
@@ -530,8 +460,7 @@ DEGlist <- c(up_down, up, down)
 DEGlist <- DEGlist[sapply(DEGlist, length) > 0]
 BatchResult <- GOCluster_Report(catdb=catdb, setlist=DEGlist, method="all", id_type="gene", CLSZ=2, cutoff=0.9, gocats=c("MF", "BP", "CC"), recordSpecGO=NULL)
 library("biomaRt")
-# m <- useMart("plants_mart", dataset="athaliana_eg_gene", host="plants.ensembl.org")
-m <- useMart("ensembl", dataset="xmaculatus_gene_ensembl", host="ensembl.org")
+m <- useMart("plants_mart", dataset="athaliana_eg_gene", host="plants.ensembl.org")
 goslimvec <- as.character(getBM(attributes=c("goslim_goa_accession"), mart=m)[,1])
 BatchResultslim <- GOCluster_Report(catdb=catdb, setlist=DEGlist, method="slim", id_type="gene", myslimv=goslimvec, CLSZ=10, cutoff=0.01, gocats=c("MF", "BP", "CC"), recordSpecGO=NULL)
 ```
@@ -544,7 +473,7 @@ the results from different DEG sets in the same bar plot. Plotting
 single sample sets is achieved by subsetting the input data frame as
 shown in the first line of the following example.
 
-```{r go_plot, eval=F}
+```{r go_plot, eval=FALSE}
 gos <- BatchResultslim[grep("M6-V6_up_down", BatchResultslim$CLID), ]
 gos <- BatchResultslim
 pdf("GOslimbarplotMF.pdf", height=8, width=10); goBarplot(gos, gocat="MF"); dev.off()
@@ -562,7 +491,7 @@ transformed expression matrix subsetted by the DEGs identified in the above
 differential expression analysis. It uses a Pearson correlation-based distance
 measure and complete linkage for cluster joining.
 
-```{r heatmap, eval=T}
+```{r heatmap, eval=FALSE}
 library(pheatmap)
 geneids <- unique(as.character(unlist(DEG_list[[1]])))
 y <- assay(rlog(dds))[geneids, ]

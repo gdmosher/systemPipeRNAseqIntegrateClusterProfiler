@@ -1,0 +1,1154 @@
+Thu Jul  6 14:41:18 PDT 2017
+
+R version 3.4.0 (2017-04-21) -- "You Stupid Darkness"
+Copyright (C) 2017 The R Foundation for Statistical Computing
+Platform: x86_64-pc-linux-gnu (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> rmarkdown::render('systemPipeRNAseqIntegrateClusterProfiler.Rmd')
+
+
+processing file: systemPipeRNAseqIntegrateClusterProfiler.Rmd
+  |                                                                         |                                                                 |   0%  |                                                                         |.                                                                |   2%
+   inline R code fragments
+
+  |                                                                         |..                                                               |   3%
+label: style (with options) 
+List of 2
+ $ echo   : logi FALSE
+ $ results: chr "asis"
+
+  |                                                                         |...                                                              |   5%
+  ordinary text without R code
+
+  |                                                                         |....                                                             |   7%
+label: setup (with options) 
+List of 3
+ $ echo    : logi FALSE
+ $ messages: logi FALSE
+ $ warnings: logi FALSE
+
+  |                                                                         |......                                                           |   8%
+  ordinary text without R code
+
+  |                                                                         |.......                                                          |  10%
+label: genRna_workflow (with options) 
+List of 1
+ $ eval: logi FALSE
+
+  |                                                                         |........                                                         |  12%
+  ordinary text without R code
+
+  |                                                                         |.........                                                        |  14%
+label: genRna_workflow_command_line (with options) 
+List of 2
+ $ eval  : logi FALSE
+ $ engine: chr "sh"
+
+  |                                                                         |..........                                                       |  15%
+  ordinary text without R code
+
+  |                                                                         |...........                                                      |  17%
+label: node_environment (with options) 
+List of 1
+ $ eval: logi FALSE
+
+  |                                                                         |............                                                     |  19%
+  ordinary text without R code
+
+  |                                                                         |.............                                                    |  20%
+label: r_environment (with options) 
+List of 1
+ $ eval: symbol T
+
+i33
+  |                                                                         |..............                                                   |  22%
+  ordinary text without R code
+
+  |                                                                         |...............                                                  |  24%
+label: load_systempiper (with options) 
+List of 1
+ $ eval: logi TRUE
+
+  |                                                                         |.................                                                |  25%
+  ordinary text without R code
+
+  |                                                                         |..................                                               |  27%
+label: source_helper_fcts (with options) 
+List of 1
+ $ eval: logi FALSE
+
+  |                                                                         |...................                                              |  29%
+  ordinary text without R code
+
+  |                                                                         |....................                                             |  31%
+label: load_targets (with options) 
+List of 1
+ $ eval: logi TRUE
+
+  |                                                                         |.....................                                            |  32%
+  ordinary text without R code
+
+  |                                                                         |......................                                           |  34%
+label: fastq_filter (with options) 
+List of 1
+ $ eval: symbol T
+
+  |                                                                         |.......................                                          |  36%
+  ordinary text without R code
+
+  |                                                                         |........................                                         |  37%
+label: fastq_report (with options) 
+List of 1
+ $ eval: symbol T
+
+  |                                                                         |.........................                                        |  39%
+  ordinary text without R code
+
+  |                                                                         |..........................                                       |  41%
+label: tophat_alignment1 (with options) 
+List of 1
+ $ eval: symbol T
+
+  |                                                                         |............................                                     |  42%
+  ordinary text without R code
+
+  |                                                                         |.............................                                    |  44%
+label: tophat_alignment2 (with options) 
+List of 1
+ $ eval: symbol T
+
+Settings:
+  Output files: "./data/tair10.fasta.*.bt2"
+  Line rate: 6 (line is 64 bytes)
+  Lines per side: 1 (side is 64 bytes)
+  Offset rate: 4 (one in 16)
+  FTable chars: 10
+  Strings: unpacked
+  Max bucket size: default
+  Max bucket size, sqrt multiplier: default
+  Max bucket size, len divisor: 4
+  Difference-cover sample period: 1024
+  Endianness: little
+  Actual local endianness: little
+  Sanity checking: disabled
+  Assertions: disabled
+  Random seed: 0
+  Sizeofs: void*:8, int:4, long:8, size_t:8
+Input files DNA, FASTA:
+  ./data/tair10.fasta
+Building a SMALL index
+Reading reference sizes
+  Time reading reference sizes: 00:00:00
+Calculating joined length
+Writing header
+Reserving space for joined string
+Joining reference sequences
+  Time to join reference sequences: 00:00:00
+bmax according to bmaxDivN setting: 174443
+Using parameters --bmax 130833 --dcv 1024
+  Doing ahead-of-time memory usage test
+  Passed!  Constructing with these parameters: --bmax 130833 --dcv 1024
+Constructing suffix-array element generator
+Building DifferenceCoverSample
+  Building sPrime
+  Building sPrimeOrder
+  V-Sorting samples
+  V-Sorting samples time: 00:00:00
+  Allocating rank array
+  Ranking v-sort output
+  Ranking v-sort output time: 00:00:00
+  Invoking Larsson-Sadakane on ranks
+  Invoking Larsson-Sadakane on ranks time: 00:00:00
+  Sanity-checking and returning
+Building samples
+Reserving space for 12 sample suffixes
+Generating random suffixes
+QSorting 12 sample offsets, eliminating duplicates
+QSorting sample offsets, eliminating duplicates time: 00:00:00
+Multikey QSorting 12 samples
+  (Using difference cover)
+  Multikey QSorting samples time: 00:00:00
+Calculating bucket sizes
+  Binary sorting into buckets
+  10%
+  20%
+  30%
+  40%
+  50%
+  60%
+  70%
+  80%
+  90%
+  100%
+  Binary sorting into buckets time: 00:00:00
+Splitting and merging
+  Splitting and merging time: 00:00:00
+Split 1, merged 5; iterating...
+  Binary sorting into buckets
+  10%
+  20%
+  30%
+  40%
+  50%
+  60%
+  70%
+  80%
+  90%
+  100%
+  Binary sorting into buckets time: 00:00:00
+Splitting and merging
+  Splitting and merging time: 00:00:00
+Avg bucket size: 87221 (target: 130832)
+Converting suffix-array elements to index image
+Allocating ftab, absorbFtab
+Entering Ebwt loop
+Getting block 1 of 8
+  Reserving size (130833) for bucket
+  Calculating Z arrays
+  Calculating Z arrays time: 00:00:00
+  Entering block accumulator loop:
+  10%
+  20%
+  30%
+  40%
+  50%
+  60%
+  70%
+  80%
+  90%
+  100%
+  Block accumulator loop time: 00:00:00
+  Sorting block of length 120251
+  (Using difference cover)
+  Sorting block time: 00:00:00
+Returning block of 120252
+Getting block 2 of 8
+  Reserving size (130833) for bucket
+  Calculating Z arrays
+  Calculating Z arrays time: 00:00:00
+  Entering block accumulator loop:
+  10%
+  20%
+  30%
+  40%
+  50%
+  60%
+  70%
+  80%
+  90%
+  100%
+  Block accumulator loop time: 00:00:00
+  Sorting block of length 72342
+  (Using difference cover)
+  Sorting block time: 00:00:00
+Returning block of 72343
+Getting block 3 of 8
+  Reserving size (130833) for bucket
+  Calculating Z arrays
+  Calculating Z arrays time: 00:00:00
+  Entering block accumulator loop:
+  10%
+  20%
+  30%
+  40%
+  50%
+  60%
+  70%
+  80%
+  90%
+  100%
+  Block accumulator loop time: 00:00:00
+  Sorting block of length 65777
+  (Using difference cover)
+  Sorting block time: 00:00:00
+Returning block of 65778
+Getting block 4 of 8
+  Reserving size (130833) for bucket
+  Calculating Z arrays
+  Calculating Z arrays time: 00:00:00
+  Entering block accumulator loop:
+  10%
+  20%
+  30%
+  40%
+  50%
+  60%
+  70%
+  80%
+  90%
+  100%
+  Block accumulator loop time: 00:00:00
+  Sorting block of length 105724
+  (Using difference cover)
+  Sorting block time: 00:00:00
+Returning block of 105725
+Getting block 5 of 8
+  Reserving size (130833) for bucket
+  Calculating Z arrays
+  Calculating Z arrays time: 00:00:00
+  Entering block accumulator loop:
+  10%
+  20%
+  30%
+  40%
+  50%
+  60%
+  70%
+  80%
+  90%
+  100%
+  Block accumulator loop time: 00:00:00
+  Sorting block of length 74161
+  (Using difference cover)
+  Sorting block time: 00:00:00
+Returning block of 74162
+Getting block 6 of 8
+  Reserving size (130833) for bucket
+  Calculating Z arrays
+  Calculating Z arrays time: 00:00:00
+  Entering block accumulator loop:
+  10%
+  20%
+  30%
+  40%
+  50%
+  60%
+  70%
+  80%
+  90%
+  100%
+  Block accumulator loop time: 00:00:00
+  Sorting block of length 103131
+  (Using difference cover)
+  Sorting block time: 00:00:00
+Returning block of 103132
+Getting block 7 of 8
+  Reserving size (130833) for bucket
+  Calculating Z arrays
+  Calculating Z arrays time: 00:00:00
+  Entering block accumulator loop:
+  10%
+  20%
+  30%
+  40%
+  50%
+  60%
+  70%
+  80%
+  90%
+  100%
+  Block accumulator loop time: 00:00:00
+  Sorting block of length 75073
+  (Using difference cover)
+  Sorting block time: 00:00:00
+Returning block of 75074
+Getting block 8 of 8
+  Reserving size (130833) for bucket
+  Calculating Z arrays
+  Calculating Z arrays time: 00:00:00
+  Entering block accumulator loop:
+  10%
+  20%
+  30%
+  40%
+  50%
+  60%
+  70%
+  80%
+  90%
+  100%
+  Block accumulator loop time: 00:00:00
+  Sorting block of length 81309
+  (Using difference cover)
+  Sorting block time: 00:00:00
+Returning block of 81310
+Exited Ebwt loop
+fchr[A]: 0
+fchr[C]: 212766
+fchr[G]: 349793
+fchr[T]: 483660
+fchr[$]: 697775
+Exiting Ebwt::buildToDisk()
+Returning from initFromVector
+Wrote 4427308 bytes to primary EBWT file: ./data/tair10.fasta.1.bt2
+Wrote 174448 bytes to secondary EBWT file: ./data/tair10.fasta.2.bt2
+Re-opening _in1 and _in2 as input streams
+Returning from Ebwt constructor
+Headers:
+    len: 697775
+    bwtLen: 697776
+    sz: 174444
+    bwtSz: 174444
+    lineRate: 6
+    offRate: 4
+    offMask: 0xfffffff0
+    ftabChars: 10
+    eftabLen: 20
+    eftabSz: 80
+    ftabLen: 1048577
+    ftabSz: 4194308
+    offsLen: 43611
+    offsSz: 174444
+    lineSz: 64
+    sideSz: 64
+    sideBwtSz: 48
+    sideBwtLen: 192
+    numSides: 3635
+    numLines: 3635
+    ebwtTotLen: 232640
+    ebwtTotSz: 232640
+    color: 0
+    reverse: 0
+Total time for call to driver() for forward index: 00:00:01
+Reading reference sizes
+  Time reading reference sizes: 00:00:00
+Calculating joined length
+Writing header
+Reserving space for joined string
+Joining reference sequences
+  Time to join reference sequences: 00:00:00
+  Time to reverse reference sequence: 00:00:00
+bmax according to bmaxDivN setting: 174443
+Using parameters --bmax 130833 --dcv 1024
+  Doing ahead-of-time memory usage test
+  Passed!  Constructing with these parameters: --bmax 130833 --dcv 1024
+Constructing suffix-array element generator
+Building DifferenceCoverSample
+  Building sPrime
+  Building sPrimeOrder
+  V-Sorting samples
+  V-Sorting samples time: 00:00:00
+  Allocating rank array
+  Ranking v-sort output
+  Ranking v-sort output time: 00:00:00
+  Invoking Larsson-Sadakane on ranks
+  Invoking Larsson-Sadakane on ranks time: 00:00:00
+  Sanity-checking and returning
+Building samples
+Reserving space for 12 sample suffixes
+Generating random suffixes
+QSorting 12 sample offsets, eliminating duplicates
+QSorting sample offsets, eliminating duplicates time: 00:00:00
+Multikey QSorting 12 samples
+  (Using difference cover)
+  Multikey QSorting samples time: 00:00:00
+Calculating bucket sizes
+  Binary sorting into buckets
+  10%
+  20%
+  30%
+  40%
+  50%
+  60%
+  70%
+  80%
+  90%
+  100%
+  Binary sorting into buckets time: 00:00:00
+Splitting and merging
+  Splitting and merging time: 00:00:00
+Split 1, merged 7; iterating...
+  Binary sorting into buckets
+  10%
+  20%
+  30%
+  40%
+  50%
+  60%
+  70%
+  80%
+  90%
+  100%
+  Binary sorting into buckets time: 00:00:00
+Splitting and merging
+  Splitting and merging time: 00:00:00
+Split 1, merged 1; iterating...
+  Binary sorting into buckets
+  10%
+  20%
+  30%
+  40%
+  50%
+  60%
+  70%
+  80%
+  90%
+  100%
+  Binary sorting into buckets time: 00:00:00
+Splitting and merging
+  Splitting and merging time: 00:00:00
+Split 1, merged 0; iterating...
+  Binary sorting into buckets
+  10%
+  20%
+  30%
+  40%
+  50%
+  60%
+  70%
+  80%
+  90%
+  100%
+  Binary sorting into buckets time: 00:00:00
+Splitting and merging
+  Splitting and merging time: 00:00:00
+Avg bucket size: 99681.3 (target: 130832)
+Converting suffix-array elements to index image
+Allocating ftab, absorbFtab
+Entering Ebwt loop
+Getting block 1 of 7
+  Reserving size (130833) for bucket
+  Calculating Z arrays
+  Calculating Z arrays time: 00:00:00
+  Entering block accumulator loop:
+  10%
+  20%
+  30%
+  40%
+  50%
+  60%
+  70%
+  80%
+  90%
+  100%
+  Block accumulator loop time: 00:00:00
+  Sorting block of length 125017
+  (Using difference cover)
+  Sorting block time: 00:00:00
+Returning block of 125018
+Getting block 2 of 7
+  Reserving size (130833) for bucket
+  Calculating Z arrays
+  Calculating Z arrays time: 00:00:00
+  Entering block accumulator loop:
+  10%
+  20%
+  30%
+  40%
+  50%
+  60%
+  70%
+  80%
+  90%
+  100%
+  Block accumulator loop time: 00:00:00
+  Sorting block of length 124131
+  (Using difference cover)
+  Sorting block time: 00:00:00
+Returning block of 124132
+Getting block 3 of 7
+  Reserving size (130833) for bucket
+  Calculating Z arrays
+  Calculating Z arrays time: 00:00:00
+  Entering block accumulator loop:
+  10%
+  20%
+  30%
+  40%
+  50%
+  60%
+  70%
+  80%
+  90%
+  100%
+  Block accumulator loop time: 00:00:00
+  Sorting block of length 98073
+  (Using difference cover)
+  Sorting block time: 00:00:00
+Returning block of 98074
+Getting block 4 of 7
+  Reserving size (130833) for bucket
+  Calculating Z arrays
+  Calculating Z arrays time: 00:00:00
+  Entering block accumulator loop:
+  10%
+  20%
+  30%
+  40%
+  50%
+  60%
+  70%
+  80%
+  90%
+  100%
+  Block accumulator loop time: 00:00:00
+  Sorting block of length 67333
+  (Using difference cover)
+  Sorting block time: 00:00:00
+Returning block of 67334
+Getting block 5 of 7
+  Reserving size (130833) for bucket
+  Calculating Z arrays
+  Calculating Z arrays time: 00:00:00
+  Entering block accumulator loop:
+  10%
+  20%
+  30%
+  40%
+  50%
+  60%
+  70%
+  80%
+  90%
+  100%
+  Block accumulator loop time: 00:00:00
+  Sorting block of length 129828
+  (Using difference cover)
+  Sorting block time: 00:00:00
+Returning block of 129829
+Getting block 6 of 7
+  Reserving size (130833) for bucket
+  Calculating Z arrays
+  Calculating Z arrays time: 00:00:00
+  Entering block accumulator loop:
+  10%
+  20%
+  30%
+  40%
+  50%
+  60%
+  70%
+  80%
+  90%
+  100%
+  Block accumulator loop time: 00:00:00
+  Sorting block of length 127885
+  (Using difference cover)
+  Sorting block time: 00:00:01
+Returning block of 127886
+Getting block 7 of 7
+  Reserving size (130833) for bucket
+  Calculating Z arrays
+  Calculating Z arrays time: 00:00:00
+  Entering block accumulator loop:
+  10%
+  20%
+  30%
+  40%
+  50%
+  60%
+  70%
+  80%
+  90%
+  100%
+  Block accumulator loop time: 00:00:00
+  Sorting block of length 25502
+  (Using difference cover)
+  Sorting block time: 00:00:00
+Returning block of 25503
+Exited Ebwt loop
+fchr[A]: 0
+fchr[C]: 212766
+fchr[G]: 349793
+fchr[T]: 483660
+fchr[$]: 697775
+Exiting Ebwt::buildToDisk()
+Returning from initFromVector
+Wrote 4427308 bytes to primary EBWT file: ./data/tair10.fasta.rev.1.bt2
+Wrote 174448 bytes to secondary EBWT file: ./data/tair10.fasta.rev.2.bt2
+Re-opening _in1 and _in2 as input streams
+Returning from Ebwt constructor
+Headers:
+    len: 697775
+    bwtLen: 697776
+    sz: 174444
+    bwtSz: 174444
+    lineRate: 6
+    offRate: 4
+    offMask: 0xfffffff0
+    ftabChars: 10
+    eftabLen: 20
+    eftabSz: 80
+    ftabLen: 1048577
+    ftabSz: 4194308
+    offsLen: 43611
+    offsSz: 174444
+    lineSz: 64
+    sideSz: 64
+    sideBwtSz: 48
+    sideBwtLen: 192
+    numSides: 3635
+    numLines: 3635
+    ebwtTotLen: 232640
+    ebwtTotSz: 232640
+    color: 0
+    reverse: 1
+Total time for backward call to driver() for mirror index: 00:00:01
+SubmitJobs |+                                                                    |   0% (00:00:00)SubmitJobs |+                                                                    |   0% (00:00:00)SubmitJobs |++++                                                                 |   6% (00:00:00)SubmitJobs |++++++++                                                             |  11% (00:00:08)SubmitJobs |++++++++++++                                                         |  17% (00:00:05)SubmitJobs |+++++++++++++++                                                      |  22% (00:00:03)SubmitJobs |+++++++++++++++++++                                                  |  28% (00:00:02)SubmitJobs |+++++++++++++++++++++++                                              |  33% (00:00:02)SubmitJobs |+++++++++++++++++++++++++++                                          |  39% (00:00:01)SubmitJobs |+++++++++++++++++++++++++++++++                                      |  44% (00:00:01)SubmitJobs |++++++++++++++++++++++++++++++++++                                   |  50% (00:00:01)SubmitJobs |++++++++++++++++++++++++++++++++++++++                               |  56% (00:00:00)SubmitJobs |++++++++++++++++++++++++++++++++++++++++++                           |  61% (00:00:00)SubmitJobs |++++++++++++++++++++++++++++++++++++++++++++++                       |  67% (00:00:00)SubmitJobs |++++++++++++++++++++++++++++++++++++++++++++++++++                   |  72% (00:00:00)SubmitJobs |++++++++++++++++++++++++++++++++++++++++++++++++++++++               |  78% (00:00:00)SubmitJobs |++++++++++++++++++++++++++++++++++++++++++++++++++++++++++           |  83% (00:00:00)SubmitJobs |+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++        |  89% (00:00:00)SubmitJobs |+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++    |  94% (00:00:00)SubmitJobs |+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++| 100% (00:00:00)
+Waiting                   |+                                                     |   0% (00:00:00)Waiting [S:18 D:0 E:0 R:0] |+                                                     |   0% (00:00:00)Waiting [S:18 D:0 E:0 R:0] |+                                                     |   0% (00:00:00)Waiting [S:0 D:18 E:0 R:0] |++++++++++++++++++++++++++++++++++++++++++++++++++++++| 100% (00:00:00)
+
+  |                                                                         |..............................                                   |  46%
+  ordinary text without R code
+
+  |                                                                         |...............................                                  |  47%
+label: hisat_alignment2 (with options) 
+List of 1
+ $ eval: symbol T
+
+Settings:
+  Output files: "./data/tair10.fasta.*.ht2"
+  Line rate: 6 (line is 64 bytes)
+  Lines per side: 1 (side is 64 bytes)
+  Offset rate: 4 (one in 16)
+  FTable chars: 10
+  Strings: unpacked
+  Local offset rate: 3 (one in 8)
+  Local fTable chars: 6
+  Local sequence length: 57344
+  Local sequence overlap between two consecutive indexes: 1024
+  Endianness: little
+  Actual local endianness: little
+  Sanity checking: disabled
+  Assertions: disabled
+  Random seed: 0
+  Sizeofs: void*:8, int:4, long:8, size_t:8
+Input files DNA, FASTA:
+  ./data/tair10.fasta
+Reading reference sizes
+  Time reading reference sizes: 00:00:00
+Calculating joined length
+Writing header
+Reserving space for joined string
+Joining reference sequences
+  Time to join reference sequences: 00:00:00
+  Time to read SNPs and splice sites: 00:00:00
+  Doing ahead-of-time memory usage test
+  Passed!  Constructing with these parameters: --bmax 130833 --dcv 1024
+Constructing suffix-array element generator
+Building DifferenceCoverSample
+  Building sPrime
+  Building sPrimeOrder
+  V-Sorting samples
+  V-Sorting samples time: 00:00:00
+  Allocating rank array
+  Ranking v-sort output
+  Ranking v-sort output time: 00:00:00
+  Invoking Larsson-Sadakane on ranks
+  Invoking Larsson-Sadakane on ranks time: 00:00:00
+  Sanity-checking and returning
+Building samples
+Reserving space for 12 sample suffixes
+Generating random suffixes
+QSorting 12 sample offsets, eliminating duplicates
+QSorting sample offsets, eliminating duplicates time: 00:00:00
+Multikey QSorting 12 samples
+  (Using difference cover)
+  Multikey QSorting samples time: 00:00:00
+Calculating bucket sizes
+  Binary sorting into buckets
+  10%
+  20%
+  30%
+  40%
+  50%
+  60%
+  70%
+  80%
+  90%
+  100%
+  Binary sorting into buckets time: 00:00:00
+Splitting and merging
+  Splitting and merging time: 00:00:00
+Split 1, merged 5; iterating...
+  Binary sorting into buckets
+  10%
+  20%
+  30%
+  40%
+  50%
+  60%
+  70%
+  80%
+  90%
+  100%
+  Binary sorting into buckets time: 00:00:00
+Splitting and merging
+  Splitting and merging time: 00:00:00
+Avg bucket size: 87221 (target: 130832)
+Converting suffix-array elements to index image
+Allocating ftab, absorbFtab
+Entering GFM loop
+Getting block 1 of 8
+  Reserving size (130833) for bucket
+  Calculating Z arrays
+  Calculating Z arrays time: 00:00:00
+  Entering block accumulator loop:
+  10%
+  20%
+  30%
+  40%
+  50%
+  60%
+  70%
+  80%
+  90%
+  100%
+  Block accumulator loop time: 00:00:00
+  Sorting block of length 120251
+  (Using difference cover)
+  Sorting block time: 00:00:00
+Returning block of 120252
+Getting block 2 of 8
+  Reserving size (130833) for bucket
+  Calculating Z arrays
+  Calculating Z arrays time: 00:00:00
+  Entering block accumulator loop:
+  10%
+  20%
+  30%
+  40%
+  50%
+  60%
+  70%
+  80%
+  90%
+  100%
+  Block accumulator loop time: 00:00:00
+  Sorting block of length 72342
+  (Using difference cover)
+  Sorting block time: 00:00:00
+Returning block of 72343
+Getting block 3 of 8
+  Reserving size (130833) for bucket
+  Calculating Z arrays
+  Calculating Z arrays time: 00:00:00
+  Entering block accumulator loop:
+  10%
+  20%
+  30%
+  40%
+  50%
+  60%
+  70%
+  80%
+  90%
+  100%
+  Block accumulator loop time: 00:00:00
+  Sorting block of length 65777
+  (Using difference cover)
+  Sorting block time: 00:00:00
+Returning block of 65778
+Getting block 4 of 8
+  Reserving size (130833) for bucket
+  Calculating Z arrays
+  Calculating Z arrays time: 00:00:00
+  Entering block accumulator loop:
+  10%
+  20%
+  30%
+  40%
+  50%
+  60%
+  70%
+  80%
+  90%
+  100%
+  Block accumulator loop time: 00:00:00
+  Sorting block of length 105724
+  (Using difference cover)
+  Sorting block time: 00:00:00
+Returning block of 105725
+Getting block 5 of 8
+  Reserving size (130833) for bucket
+  Calculating Z arrays
+  Calculating Z arrays time: 00:00:00
+  Entering block accumulator loop:
+  10%
+  20%
+  30%
+  40%
+  50%
+  60%
+  70%
+  80%
+  90%
+  100%
+  Block accumulator loop time: 00:00:00
+  Sorting block of length 74161
+  (Using difference cover)
+  Sorting block time: 00:00:00
+Returning block of 74162
+Getting block 6 of 8
+  Reserving size (130833) for bucket
+  Calculating Z arrays
+  Calculating Z arrays time: 00:00:00
+  Entering block accumulator loop:
+  10%
+  20%
+  30%
+  40%
+  50%
+  60%
+  70%
+  80%
+  90%
+  100%
+  Block accumulator loop time: 00:00:00
+  Sorting block of length 103131
+  (Using difference cover)
+  Sorting block time: 00:00:00
+Returning block of 103132
+Getting block 7 of 8
+  Reserving size (130833) for bucket
+  Calculating Z arrays
+  Calculating Z arrays time: 00:00:00
+  Entering block accumulator loop:
+  10%
+  20%
+  30%
+  40%
+  50%
+  60%
+  70%
+  80%
+  90%
+  100%
+  Block accumulator loop time: 00:00:00
+  Sorting block of length 75073
+  (Using difference cover)
+  Sorting block time: 00:00:00
+Returning block of 75074
+Getting block 8 of 8
+  Reserving size (130833) for bucket
+  Calculating Z arrays
+  Calculating Z arrays time: 00:00:00
+  Entering block accumulator loop:
+  10%
+  20%
+  30%
+  40%
+  50%
+  60%
+  70%
+  80%
+  90%
+  100%
+  Block accumulator loop time: 00:00:00
+  Sorting block of length 81309
+  (Using difference cover)
+  Sorting block time: 00:00:00
+Returning block of 81310
+Exited GFM loop
+fchr[A]: 0
+fchr[C]: 212766
+fchr[G]: 349793
+fchr[T]: 483660
+fchr[$]: 697775
+Exiting GFM::buildToDisk()
+Returning from initFromVector
+Wrote 4427328 bytes to primary GFM file: ./data/tair10.fasta.1.ht2
+Wrote 174448 bytes to secondary GFM file: ./data/tair10.fasta.2.ht2
+Re-opening _in1 and _in2 as input streams
+Returning from GFM constructor
+Returning from initFromVector
+Wrote 317937 bytes to primary GFM file: ./data/tair10.fasta.5.ht2
+Wrote 176266 bytes to secondary GFM file: ./data/tair10.fasta.6.ht2
+Re-opening _in5 and _in5 as input streams
+Returning from HierEbwt constructor
+Headers:
+    len: 697775
+    gbwtLen: 697776
+    nodes: 697776
+    sz: 174444
+    gbwtSz: 174445
+    lineRate: 6
+    offRate: 4
+    offMask: 0xfffffff0
+    ftabChars: 10
+    eftabLen: 0
+    eftabSz: 0
+    ftabLen: 1048577
+    ftabSz: 4194308
+    offsLen: 43611
+    offsSz: 174444
+    lineSz: 64
+    sideSz: 64
+    sideGbwtSz: 48
+    sideGbwtLen: 192
+    numSides: 3635
+    numLines: 3635
+    gbwtTotLen: 232640
+    gbwtTotSz: 232640
+    reverse: 0
+    linearFM: Yes
+Total time for call to driver() for forward index: 00:00:00
+SubmitJobs |+                                                                    |   0% (00:00:00)SubmitJobs |+                                                                    |   0% (00:00:00)SubmitJobs |++++                                                                 |   6% (00:00:00)SubmitJobs |++++++++                                                             |  11% (00:00:00)SubmitJobs |++++++++++++                                                         |  17% (00:00:00)SubmitJobs |+++++++++++++++                                                      |  22% (00:00:00)SubmitJobs |+++++++++++++++++++                                                  |  28% (00:00:00)SubmitJobs |+++++++++++++++++++++++                                              |  33% (00:00:00)SubmitJobs |+++++++++++++++++++++++++++                                          |  39% (00:00:00)SubmitJobs |+++++++++++++++++++++++++++++++                                      |  44% (00:00:00)SubmitJobs |++++++++++++++++++++++++++++++++++                                   |  50% (00:00:00)SubmitJobs |++++++++++++++++++++++++++++++++++++++                               |  56% (00:00:00)SubmitJobs |++++++++++++++++++++++++++++++++++++++++++                           |  61% (00:00:00)SubmitJobs |++++++++++++++++++++++++++++++++++++++++++++++                       |  67% (00:00:00)SubmitJobs |++++++++++++++++++++++++++++++++++++++++++++++++++                   |  72% (00:00:00)SubmitJobs |++++++++++++++++++++++++++++++++++++++++++++++++++++++               |  78% (00:00:00)SubmitJobs |++++++++++++++++++++++++++++++++++++++++++++++++++++++++++           |  83% (00:00:00)SubmitJobs |+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++        |  89% (00:00:00)SubmitJobs |+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++    |  94% (00:00:00)SubmitJobs |+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++| 100% (00:00:00)
+Waiting                   |+                                                     |   0% (00:00:00)Waiting [S:18 D:0 E:0 R:0] |+                                                     |   0% (00:00:00)Waiting [S:18 D:0 E:0 R:0] |+                                                     |   0% (00:00:00)Waiting [S:18 D:0 E:0 R:3] |+                                                     |   0% (00:00:00)Waiting [S:0 D:18 E:0 R:0] |++++++++++++++++++++++++++++++++++++++++++++++++++++++| 100% (00:00:00)
+
+  |                                                                         |................................                                 |  49%
+  ordinary text without R code
+
+  |                                                                         |.................................                                |  51%
+label: check_files_exist (with options) 
+List of 1
+ $ eval: symbol T
+
+  |                                                                         |..................................                               |  53%
+  ordinary text without R code
+
+  |                                                                         |...................................                              |  54%
+label: align_stats (with options) 
+List of 1
+ $ eval: symbol T
+
+  |                                                                         |....................................                             |  56%
+  ordinary text without R code
+
+  |                                                                         |.....................................                            |  58%
+label: align_stats_view (with options) 
+List of 1
+ $ eval: logi TRUE
+
+  |                                                                         |.......................................                          |  59%
+  ordinary text without R code
+
+  |                                                                         |........................................                         |  61%
+label: bam_urls (with options) 
+List of 1
+ $ eval: symbol T
+
+ln: failed to create symbolic link '/rhome/gdmosher/.html/somedir/M1A.bam': File exists
+ln: failed to create symbolic link '/rhome/gdmosher/.html/somedir/M1A.bam.bai': File exists
+ln: failed to create symbolic link '/rhome/gdmosher/.html/somedir/M1B.bam': File exists
+ln: failed to create symbolic link '/rhome/gdmosher/.html/somedir/M1B.bam.bai': File exists
+ln: failed to create symbolic link '/rhome/gdmosher/.html/somedir/A1A.bam': File exists
+ln: failed to create symbolic link '/rhome/gdmosher/.html/somedir/A1A.bam.bai': File exists
+ln: failed to create symbolic link '/rhome/gdmosher/.html/somedir/A1B.bam': File exists
+ln: failed to create symbolic link '/rhome/gdmosher/.html/somedir/A1B.bam.bai': File exists
+ln: failed to create symbolic link '/rhome/gdmosher/.html/somedir/V1A.bam': File exists
+ln: failed to create symbolic link '/rhome/gdmosher/.html/somedir/V1A.bam.bai': File exists
+ln: failed to create symbolic link '/rhome/gdmosher/.html/somedir/V1B.bam': File exists
+ln: failed to create symbolic link '/rhome/gdmosher/.html/somedir/V1B.bam.bai': File exists
+ln: failed to create symbolic link '/rhome/gdmosher/.html/somedir/M6A.bam': File exists
+ln: failed to create symbolic link '/rhome/gdmosher/.html/somedir/M6A.bam.bai': File exists
+ln: failed to create symbolic link '/rhome/gdmosher/.html/somedir/M6B.bam': File exists
+ln: failed to create symbolic link '/rhome/gdmosher/.html/somedir/M6B.bam.bai': File exists
+ln: failed to create symbolic link '/rhome/gdmosher/.html/somedir/A6A.bam': File exists
+ln: failed to create symbolic link '/rhome/gdmosher/.html/somedir/A6A.bam.bai': File exists
+ln: failed to create symbolic link '/rhome/gdmosher/.html/somedir/A6B.bam': File exists
+ln: failed to create symbolic link '/rhome/gdmosher/.html/somedir/A6B.bam.bai': File exists
+ln: failed to create symbolic link '/rhome/gdmosher/.html/somedir/V6A.bam': File exists
+ln: failed to create symbolic link '/rhome/gdmosher/.html/somedir/V6A.bam.bai': File exists
+ln: failed to create symbolic link '/rhome/gdmosher/.html/somedir/V6B.bam': File exists
+ln: failed to create symbolic link '/rhome/gdmosher/.html/somedir/V6B.bam.bai': File exists
+ln: failed to create symbolic link '/rhome/gdmosher/.html/somedir/M12A.bam': File exists
+ln: failed to create symbolic link '/rhome/gdmosher/.html/somedir/M12A.bam.bai': File exists
+ln: failed to create symbolic link '/rhome/gdmosher/.html/somedir/M12B.bam': File exists
+ln: failed to create symbolic link '/rhome/gdmosher/.html/somedir/M12B.bam.bai': File exists
+ln: failed to create symbolic link '/rhome/gdmosher/.html/somedir/A12A.bam': File exists
+ln: failed to create symbolic link '/rhome/gdmosher/.html/somedir/A12A.bam.bai': File exists
+ln: failed to create symbolic link '/rhome/gdmosher/.html/somedir/A12B.bam': File exists
+ln: failed to create symbolic link '/rhome/gdmosher/.html/somedir/A12B.bam.bai': File exists
+ln: failed to create symbolic link '/rhome/gdmosher/.html/somedir/V12A.bam': File exists
+ln: failed to create symbolic link '/rhome/gdmosher/.html/somedir/V12A.bam.bai': File exists
+ln: failed to create symbolic link '/rhome/gdmosher/.html/somedir/V12B.bam': File exists
+ln: failed to create symbolic link '/rhome/gdmosher/.html/somedir/V12B.bam.bai': File exists
+  |                                                                         |.........................................                        |  63%
+  ordinary text without R code
+
+  |                                                                         |..........................................                       |  64%
+label: read_counting1 (with options) 
+List of 1
+ $ eval: symbol T
+
+  |                                                                         |...........................................                      |  66%
+  ordinary text without R code
+
+  |                                                                         |............................................                     |  68%
+label: view_counts (with options) 
+List of 1
+ $ eval: symbol T
+
+  |                                                                         |.............................................                    |  69%
+  ordinary text without R code
+
+  |                                                                         |..............................................                   |  71%
+label: view_rpkm (with options) 
+List of 1
+ $ eval: symbol T
+
+  |                                                                         |...............................................                  |  73%
+  ordinary text without R code
+
+  |                                                                         |................................................                 |  75%
+label: sample_tree (with options) 
+List of 1
+ $ eval: symbol T
+
+  |                                                                         |..................................................               |  76%
+  ordinary text without R code
+
+  |                                                                         |...................................................              |  78%
+label: run_edger (with options) 
+List of 1
+ $ eval: symbol T
+
+  |                                                                         |....................................................             |  80%
+  ordinary text without R code
+
+  |                                                                         |.....................................................            |  81%
+label: filter_degs (with options) 
+List of 1
+ $ eval: symbol T
+
+  |                                                                         |......................................................           |  83%
+  ordinary text without R code
+
+  |                                                                         |.......................................................          |  85%
+label: venn_diagram (with options) 
+List of 1
+ $ eval: symbol T
+
+  |                                                                         |........................................................         |  86%
+  ordinary text without R code
+
+  |                                                                         |.........................................................        |  88%
+label: go_enrich (with options) 
+List of 1
+ $ eval: symbol T
+
+  |                                                                         |..........................................................       |  90%
+  ordinary text without R code
+
+  |                                                                         |...........................................................      |  92%
+label: go_plot (with options) 
+List of 1
+ $ eval: symbol T
+
+  |                                                                         |.............................................................    |  93%
+  ordinary text without R code
+
+  |                                                                         |..............................................................   |  95%
+label: heatmap (with options) 
+List of 1
+ $ eval: symbol T
+
+  |                                                                         |...............................................................  |  97%
+  ordinary text without R code
+
+  |                                                                         |................................................................ |  98%
+label: sessionInfo
+  |                                                                         |.................................................................| 100%
+  ordinary text without R code
+
+
+output file: systemPipeRNAseqIntegrateClusterProfiler.knit.md
+
+/usr/bin/pandoc +RTS -K512m -RTS systemPipeRNAseqIntegrateClusterProfiler.utf8.md --to html --from markdown+autolink_bare_uris+ascii_identifiers+tex_math_single_backslash --output systemPipeRNAseqIntegrateClusterProfiler.html --smart --email-obfuscation none --self-contained --standalone --section-divs --table-of-contents --toc-depth 3 --variable toc_float=1 --variable toc_selectors=h1,h2,h3 --variable toc_collapsed=1 --variable toc_smooth_scroll=1 --variable toc_print=1 --template /bigdata/bioinfo/pkgadmin/opt/linux/centos/7.x/x86_64/pkgs/R/3.4.0/lib64/R/library/rmarkdown/rmd/h/default.html --no-highlight --variable highlightjs=1 --number-sections --variable 'theme:bootstrap' --include-in-header /tmp/Rtmp2z7fPe/rmarkdown-str28691dfd8adf.html --mathjax --variable 'mathjax-url:https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML' --variable code_folding=show --variable code_menu=1 --bibliography bibtex.bib --filter /usr/bin/pandoc-citeproc 
+
+Output created: systemPipeRNAseqIntegrateClusterProfiler.html
+> 
+> 
+i33

@@ -1,0 +1,1023 @@
+---
+title: Challenge Project
+author: "Jianhai Zhang (zhang.jianhai@hotmail.com)"
+date: "Last update: `r format(Sys.time(), '%d %B, %Y')`" 
+output:
+  html_document:
+    toc: true
+    toc_float:
+        collapsed: true
+        smooth_scroll: true
+    toc_depth: 3
+    fig_caption: yes
+    code_folding: show
+    number_sections: true
+bibliography: bibtex.bib 
+fontsize: 14pt
+---
+
+<!--
+- Compile from command-line
+
+Rscript -e "rmarkdown::render('systemPipeRNAseq.Rmd', c('html_document'), clean=F); 
+knitr::knit('systemPipeRNAseq.Rmd', tangle=TRUE)"
+Rscript ../md2jekyll.R systemPipeRNAseq.knit.md 12
+Rscript -e "rmarkdown::render('systemPipeRNAseq.Rmd', c('pdf_document'))"
+
+-->
+
+```{r style, echo = FALSE, results = 'asis'}
+
+BiocStyle::markdown()
+options(width=100, max.print=1000)
+knitr::opts_chunk$set(
+    eval=as.logical(Sys.getenv("KNITR_EVAL", "TRUE")),
+    cache=as.logical(Sys.getenv("KNITR_CACHE", "TRUE")))
+
+```
+
+```{r setup, echo=FALSE, messages=FALSE, warnings=FALSE}
+
+suppressPackageStartupMessages({
+    library(systemPipeR)
+    library(BiocParallel)
+    library(Biostrings)
+    library(Rsamtools)
+    library(GenomicRanges)
+    library(ggplot2)
+    library(GenomicAlignments)
+    library(ShortRead)
+    library(ape)
+})
+
+```
+Note: the most recent version of this tutorial can be found <a href="https://htmlpreview.github.io/?https://github.com/tgirke/systemPipeR/blob/master/vignettes/systemPipeRNAseq.html">here</a> and a short overview slide show [here](https://htmlpreview.github.io/?https://github.com/tgirke/systemPipeR/master/inst/extdata/slides/systemPipeRslides.html).
+
+# Introduction
+
+Users want to provide here background information about the design of their RNA-Seq project.
+
+
+# Samples and environment settings
+
+## Environment settings and input data
+
+Typically, the user wants to record here the sources and versions of the
+reference genome sequence along with the corresponding annotations. In
+the provided sample data set all data inputs are stored in a `data`
+subdirectory and all results will be written to a separate `results` directory,
+while the `systemPipeRNAseq.Rmd` script and the `targets` file are expected to be located 
+in the parent directory. The R session is expected to run from this parent directory.
+
+To run this sample report, mini sample FASTQ and reference genome files
+can be downloaded from
+[here](http://biocluster.ucr.edu/~tgirke/projects/systemPipeR_test_data.zip).
+The chosen data set [SRP010938](http://www.ncbi.nlm.nih.gov/sra/?term=SRP010938)
+contains 18 paired-end (PE) read sets from *Arabidposis thaliana*
+[@Howard2013-fq]. To minimize processing time during testing, each FASTQ
+file has been subsetted to 90,000-100,000 randomly sampled PE reads that
+map to the first 100,000 nucleotides of each chromosome of the *A.
+thalina* genome. The corresponding reference genome sequence (FASTA) and
+its GFF annotion files (provided in the same download) have been
+truncated accordingly. This way the entire test sample data set is less
+than 200MB in storage space. A PE read set has been chosen for this test
+data set for flexibility, because it can be used for testing both types
+of analysis routines requiring either SE (single end) reads or PE reads.
+
+The following loads one of the available NGS workflow templates (here RNA-Seq)
+into the user's current working directory. At the moment, the package includes
+workflow templates for RNA-Seq, ChIP-Seq, VAR-Seq and Ribo-Seq. Templates for
+additional NGS applications will be provided in the future.
+
+```{r genRna_workflow, eval=FALSE}
+
+# library(systemPipeRdata)
+# genWorkenvir(workflow="rnaseq")
+# setwd("rnaseq")
+
+```
+
+Alternatively, this can be done from the command-line as follows:
+
+```{sh genRna_workflow_command_line, eval=FALSE}
+
+# Rscript -e "systemPipeRdata::genWorkenvir(workflow='rnaseq')"
+
+```
+
+Now open the R markdown script `systemPipeRNAseq.Rmd`in your R IDE (_e.g._
+vim-r or RStudio) and run the workflow as outlined below. If you work under
+Vim-R-Tmux, the following command sequence will connect the user in an
+interactive session with a node on the cluster. The code of the `Rmd`
+script can then be sent from Vim on the login (head) node to an open R session running
+on the corresponding computer node. This is important since Tmux sessions
+should not be run on the computer nodes. 
+
+```{r node_environment, eval=FALSE}
+
+# push `F2` on your keyboard to open interactive R session.
+q("no") # closes R session on head node
+srun --x11 --partition=intel --mem=2gb --cpus-per-task 1 --ntasks 1 --time 2:00:00 --pty 
+bash -l R
+
+```
+
+Now check whether your R session is running on a computer node of the cluster and not on a 
+head node.
+
+```{r r_environment, eval=FALSE}
+
+system("hostname") # should return name of a compute node starting with i or c 
+getwd() # checks current working directory of R session
+dir() # returns content of current working directory
+
+```
+
+## Required packages and resources
+
+The `systemPipeR` package needs to be loaded to perform the analysis steps shown in
+this report [@H_Backman2016-bt].
+
+```{r load_systempiper, eval=TRUE}
+library(systemPipeR)
+```
+
+If applicable load custom functions not provided by
+
+```{r source_helper_fcts, eval=FALSE}
+source("systemPipeRNAseq_Fct_JZ.R")
+```
+## Experiment definition provided by `targets` file.
+
+The `targets` file defines all FASTQ files and sample comparisons of the analysis workflow.
+
+```{r load_targets, eval=F}
+
+targetspath <- system.file("extdata", "targets.txt", package="systemPipeR")
+targets <- read.delim(targetspath, comment.char = "#")[,1:4]
+targets
+
+```
+
+# Read preprocessing
+
+## Read quality filtering and trimming
+
+The function `preprocessReads` allows to apply predefined or custom read preprocessing 
+functions to all FASTQ files referenced in a `SYSargs` container, such as quality filtering
+or adaptor trimming routines.  The following example performs adaptor trimming with the 
+`trimLRPatterns` function from the `Biostrings` package. After the trimming step a new 
+targets file is generated (here `targets_trim.txt`) containing the paths to the trimmed 
+FASTQ files. The new targets file can be used for the next workflow step with an updated
+`SYSargs` instance, _e.g._ running the NGS alignments using the trimmed FASTQ files.
+
+```{r fastq_filter_pattern, eval=FALSE}
+
+args <- systemArgs(sysma="param/trimPE_JZ.param", mytargets="targetsPE.txt")
+preprocessReads(args=args, Fct="trimLRPatterns(Rpattern='GCCCGGGTAA', subject=fq)",
+                batchsize=100000, overwrite=TRUE, compress=TRUE)
+writeTargetsout(x=args, file="targetsPE_trim_JZ.txt", overwrite=TRUE)
+
+```
+
+```{r fastq_filter_quality, eval=FALSE}
+
+args <- systemArgs(sysma="param/trimPE_JZ.param", mytargets="targetsPE.txt")
+filterFct <- function(fq, cutoff=20, Nexceptions=0) {
+    qcount <- rowSums(as(quality(fq), "matrix") <= cutoff)
+    fq[qcount <= Nexceptions] # Retains reads where Phred scores are >= cutoff with N exceptions
+}
+preprocessReads(args=args, Fct="filterFct(fq, cutoff=20, Nexceptions=0)", batchsize=100000)
+writeTargetsout(x=args, file="targetsPE_trim_JZ.txt", overwrite = T)
+
+```
+
+
+## FASTQ quality report
+
+The following `seeFastq` and `seeFastqPlot` functions generate and plot a series of useful 
+quality statistics for a set of FASTQ files including per cycle quality box plots, base 
+proportions, base-level quality trends, relative k-mer diversity, length and occurrence 
+distribution of reads, number of reads above quality cutoffs and mean quality distribution.
+The results are written to a PDF file named `fastqReport.pdf`.
+
+```{r fastq_report, eval=FALSE}
+
+args <- systemArgs(sysma="param/tophat_JZ.param", mytargets="targetsPE_trim_JZ.txt")
+fqlist1 <- seeFastq(fastq=infile1(args), batchsize=100000, klength=8)
+fqlist2 <- seeFastq(fastq=infile2(args), batchsize=100000, klength=8)
+png("./results/fastqReport_JZ.png", height=18, width=4*length(fqlist1))
+seeFastqPlot(fqlist1); seeFastqPlot(fqlist2)
+dev.off()
+
+``` 
+
+![](results/fastqReport_JZ.png)
+<div align="center">Figure 1: FASTQ quality report for 18 samples</div></br>
+
+
+# Alignments
+
+## Read mapping with `Bowtie2/Tophat2` 
+
+The NGS reads of this project will be aligned against the reference genome sequence using 
+`Bowtie2/TopHat2` [@Kim2013-vg; @Langmead2012-bs]. The parameter settings of the aligner 
+are defined in the `tophat.param` file.
+
+```{r tophat_alignment1, eval=FALSE}
+
+args <- systemArgs(sysma="param/tophat_JZ.param", mytargets="targetsPE_trim_JZ.txt")
+sysargs(args)[1] # Command-line parameters for first FASTQ file
+
+```
+
+
+Submission of alignment jobs to compute cluster, here using 72 CPU cores (18 `qsub` 
+processes each with 4 CPU cores).
+
+```{r tophat_alignment2, eval=FALSE}
+
+moduleload(modules(args))
+system("bowtie2-build ./data/TAIR10_chr_all.fas ./data/TAIR10_chr_all.fas")
+resources <- list(walltime="20:00:00", ntasks=cores(args), ncpus=cores(args), memory="10G")
+reg <- clusterRun(args, conffile=".BatchJobs.R", template="slurm.tmpl", Njobs=18, runid="_JZ",
+                  resourceList=resources)
+waitForJobs(reg)
+
+```
+
+## Read mapping with `HISAT2`
+
+```{r hisat_alignment2, eval=FALSE}
+
+args <- systemArgs(sysma="param/hisat2.param", mytargets="targets.txt")
+sysargs(args)[1] # Command-line parameters for first FASTQ file
+moduleload(modules(args))
+system("hisat2-build ./data/tair10.fasta ./data/tair10.fasta")
+resources <- list(walltime="20:00:00", ntasks=1, ncpus=cores(args), memory="10G")
+reg <- clusterRun(args, conffile=".BatchJobs.R", template="slurm.tmpl", Njobs=18, runid="_JZ",
+                  resourceList=resources)
+ waitForJobs(reg)
+
+```
+
+Check whether all BAM files have been created
+
+```{r check_files_exist, eval=FALSE}
+file.exists(outpaths(args))
+```
+
+## Read and alignment stats
+
+The following provides an overview of the number of reads in each sample and how many of 
+them aligned to the reference.
+
+```{r align_stats, eval=FALSE}
+
+read_statsDF <- alignStats(args=args) 
+write.table(read_statsDF, "results/alignStats_JZ.xls", row.names=FALSE, quote=FALSE, sep="\t")
+
+```
+
+The following shows the alignment statistics for a sample file provided by the `systemPipeR`
+package. 
+
+```{r align_stats_view, eval=F}
+read.table(system.file("extdata", "alignStats.xls", package="systemPipeR"), header=TRUE)[1:4,]
+```
+
+
+## Create symbolic links for viewing BAM files in IGV
+
+The `symLink2bam` function creates symbolic links to view the BAM alignment files in a 
+genome browser such as IGV. The corresponding URLs are written to a file with a path 
+specified under `urlfile` in the `results` directory.
+
+```{r bam_urls, eval=FALSE}
+
+symLink2bam(sysargs=args, htmldir=c("~/.html/", "gen242/"), 
+            urlbase="http://biocluster.ucr.edu/~jzhan067/", 
+	        urlfile="./results/IGVurl_JZ.txt")
+
+```
+
+
+# Read quantification
+
+## Read counting with `summarizeOverlaps` in parallel mode using multiple cores
+
+Reads overlapping with annotation ranges of interest are counted for each sample using the 
+`summarizeOverlaps` function [@Lawrence2013-kt]. The read counting is preformed for exonic 
+gene regions in a non-strand-specific manner while ignoring overlaps among different genes. 
+Subsequently, the expression count values are normalized by *reads per kp per million 
+mapped reads*(RPKM). The raw read count table (`countDFeByg.xls`) and the correspoding RPKM
+table (`rpkmDFeByg.xls`) are written to separate files in the directory of this project. 
+Parallelization is achieved with the `BiocParallel` package, here using 8 CPU cores.
+
+```{r read_counting1, eval=FALSE}
+
+library("GenomicFeatures"); library(BiocParallel)
+txdb <- makeTxDbFromGFF(file="data/TAIR10_GFF3_genes.gff", format="gff", dataSource="TAIR", 
+organism="Arabidopsis thaliana")
+saveDb(txdb, file="./data/tair10_JZ.sqlite")
+txdb <- loadDb("./data/tair10_JZ.sqlite")
+(align <- readGAlignments(outpaths(args)[1])) # Demonstrates how to read bam file into R
+eByg <- exonsBy(txdb, by=c("gene"))
+bfl <- BamFileList(outpaths(args), yieldSize=50000, index=character())
+multicoreParam <- MulticoreParam(workers=2); register(multicoreParam); registered()
+counteByg <- bplapply(bfl, function(x) summarizeOverlaps(eByg, x, mode="Union", 
+                                               ignore.strand=TRUE, 
+                                               inter.feature=FALSE, 
+                                               singleEnd=F)) 
+countDFeByg <- sapply(seq(along=counteByg), function(x) assays(counteByg[[x]])$counts)
+rownames(countDFeByg) <- names(rowRanges(counteByg[[1]])); colnames(countDFeByg) <- names(bfl)
+rpkmDFeByg <- apply(countDFeByg, 2, function(x) returnRPKM(counts=x, ranges=eByg))
+write.table(countDFeByg, "results/countDFeByg_JZ.xls", col.names=NA, quote=FALSE, sep="\t")
+write.table(rpkmDFeByg, "results/rpkmDFeByg_JZ.xls", col.names=NA, quote=FALSE, sep="\t")
+
+```
+
+Sample of data slice of count table
+```{r view_counts, eval=FALSE}
+read.delim("results/countDFeByg_JZ.xls", row.names=1, check.names=FALSE)[1:4,1:5]
+```
+
+Sample of data slice of RPKM table
+
+```{r view_rpkm, eval=FALSE}
+read.delim("results/rpkmDFeByg_JZ.xls", row.names=1, check.names=FALSE)[1:4,1:4]
+```
+
+Note, for most statistical differential expression or abundance analysis methods, such as 
+`edgeR` or `DESeq2`, the raw count values should be used as input. The usage of RPKM values
+should be restricted to specialty applications required by some users, *e.g.* manually 
+comparing the expression levels among different genes or features.
+
+## Sample-wise correlation analysis
+
+The following computes the sample-wise Spearman correlation coefficients from the `rlog` 
+transformed expression values generated with the `DESeq2` package. After transformation to 
+a distance matrix, hierarchical clustering is performed with the `hclust` function and the 
+result is plotted as a dendrogram (also see file `sample_tree.pdf`).
+
+```{r sample_tree, eval=FALSE}
+
+library(DESeq2, quietly=TRUE); library(ape,  warn.conflicts=FALSE)
+countDF <- as.matrix(read.table("./results/countDFeByg_JZ.xls"))
+colData <- data.frame(row.names=targetsin(args)$SampleName, condition=targetsin(args)$Factor)
+dds <- DESeqDataSetFromMatrix(countData = countDF, colData = colData, design = ~ condition)
+d <- cor(assay(rlog(dds)), method="spearman")
+hc <- hclust(dist(1-d))
+png("results/sample_tree_JZ.png")
+plot.phylo(as.phylo(hc), type="p", edge.col="blue", edge.width=2, show.node.label=TRUE, 
+no.margin=F, main = "Sample clustering")
+dev.off()
+
+```
+
+![](results/sample_tree_JZ.png)
+<div align="center">Figure 2: Correlation dendrogram of samples</div></br>
+
+# Analysis of DEGs
+
+The analysis of differentially expressed genes (DEGs) is performed with the glm method of 
+the `edgeR` package [@Robinson2010-uk]. The sample comparisons used by this analysis are 
+defined in the header lines of the `targetsPE_trim_JZ.txt` file starting with `<CMP>`.
+
+
+## Run `edgeR`
+
+```{r run_edger, eval=FALSE}
+
+library(edgeR)
+countDF <- read.delim("results/countDFeByg_JZ.xls", row.names=1, check.names=FALSE) 
+targets <- read.delim("targetsPE_trim_JZ.txt", comment="#")
+cmp <- readComp(file="targetsPE_trim_JZ.txt", format="matrix", delim="-")
+edgeDF <- run_edgeR(countDF=countDF, targets=targets, cmp=cmp[[1]], independent=FALSE, 
+mdsplot="")
+
+```
+
+## Add gene descriptions
+
+```{r custom_annot, eval=FALSE}
+
+library("biomaRt")
+m <- useMart("plants_mart", dataset="athaliana_eg_gene", host="plants.ensembl.org")
+desc <- getBM(attributes=c("tair_locus", "description"), mart=m)
+desc <- desc[!duplicated(desc[,1]),]
+descv <- as.character(desc[,2]); names(descv) <- as.character(desc[,1])
+edgeDF <- data.frame(edgeDF, Desc=descv[rownames(edgeDF)], check.names=FALSE)
+write.table(edgeDF, "./results/edgeRglm_allcomp_JZ.xls", quote=FALSE, sep="\t", col.names
+= NA)
+
+```
+
+## Plot DEG results
+
+Filter and plot DEG results for up and down regulated genes. The definition of *up* and 
+*down* is given in the corresponding help file. To open it, type `?filterDEGs` in the R 
+console.
+
+```{r filter_degs, eval=FALSE}
+
+edgeDF <- read.delim("results/edgeRglm_allcomp_JZ.xls", row.names=1, check.names=FALSE) 
+png("results/DEGcounts_JZ.png")
+DEG_list <- filterDEGs(degDF=edgeDF, filter=c(Fold=2, FDR=10))
+dev.off()
+write.table(DEG_list$Summary, "./results/DEGcounts_JZ.xls", quote=FALSE, sep="\t", 
+row.names=FALSE)
+
+```
+
+![](results/DEGcounts_JZ.png)
+<div align="center">Figure 3: Up and down regulated DEGs with FDR of 10%</div></br>
+
+## Venn diagrams of DEG sets
+
+The `overLapper` function can compute Venn intersects for large numbers of sample sets (up 
+to 20 or more) and plots 2-5 way Venn diagrams. A useful feature is the possiblity to 
+combine the counts from several Venn comparisons with the same number of sample sets in a 
+single Venn diagram (here for 4 up and down DEG sets).
+
+```{r venn_diagram, eval=FALSE}
+
+vennsetup <- overLapper(DEG_list$Up[6:9], type="vennsets")
+vennsetdown <- overLapper(DEG_list$Down[6:9], type="vennsets")
+png("results/vennplot_JZ.png")
+vennPlot(list(vennsetup, vennsetdown), mymain="", mysub="", colmode=2, ccol=c("blue", "red"))
+dev.off()
+
+```
+
+![](results/vennplot_JZ.png)
+<div align="center">Figure 4: Venn Diagram for 4 Up and Down DEG Sets</div></br>
+
+# GO term enrichment analysis
+
+## Obtain gene-to-GO mappings
+
+The following shows how to obtain gene-to-GO mappings from `biomaRt` (here for *A.thaliana*)
+and how to organize them for the downstream GO term enrichment analysis. Alternatively, the
+gene-to-GO mappings can be obtained for many organisms from Bioconductor’s `*.db` genome
+annotation packages or GO annotation files provided by various genome databases. For each 
+annotation this relatively slow preprocessing step needs to be performed only once. 
+Subsequently, the preprocessed data can be loaded with the `load` function as shown in the 
+next subsection.
+
+```{r go_DB, eval=FALSE}
+GO.DB()
+```
+
+## Batch GO term enrichment analysis
+
+Apply the enrichment analysis to the DEG sets obtained the above differential
+expression analysis. Note, in the following example the `FDR` filter is set
+here to an unreasonably high value, simply because of the small size of the toy
+data set used in this vignette. Batch enrichment analysis of many gene sets is
+performed with the function. When `method=all`, it returns all GO terms passing
+the p-value cutoff specified under the `cutoff` arguments. When `method=slim`,
+it returns only the GO terms specified under the `myslimv` argument. The given
+example shows how a GO slim vector for a specific organism can be obtained from
+BioMart.
+
+
+# GO enrichment for edgeR gene list.
+```{r go_enrich, eval=FALSE}
+
+# Filter the gene before using the `GO.enrich()` function.
+DEG_list <- filterDEGs(degDF=edgeDF, filter=c(Fold=2, FDR=10), plot=FALSE)
+
+# Use `GO.enrich(DEG.list, append.name)` function to perform GO analysis. `DEG.list`: filtered
+gene list, e.g. DEG.list <- filterDEGs(degDF=edgeDF, filter=c(Fold=2, FDR=10), plot=FALSE);
+`append.name`: e.g. if append.name <- "edge", output files are results/BatchResultslim_GO_edge.xlsx,
+results/BatchResult_GO_edge.xlsx.
+GO.enrich(DEG_list, "edge")
+
+```
+
+# Plot batch GO term results
+The `data.frame` generated by `GOCluster` can be plotted with the `goBarplot` function. 
+Because of the variable size of the sample sets, it may not always be desirable to show the 
+results from different DEG sets in the same bar plot. Plotting single sample sets is achieved
+by subsetting the input data frame as shown in the first line of the following example.
+```{r go_plot, eval=FALSE} 
+
+# The plot is carried out by `GO.plot.slim(file.path, type, DE.method)`. `file.path`: the 
+# file path of batch GO term results, generated by `GO.enrich()` function; `type`: one of MF,
+# BP, CC; `DE.method`: the method used to generate the DEG list, e.g. one of edge, deseq, vm.
+
+GO.plot.slim("results/BatchResultslim_GO_edge.xlsx", "CC", "edge")
+
+```
+<center><img src="results/GOslimbarplotCC_edge_JZ.png"></center>
+<div align="center">Figure 5: GO Slim Barplot for CC Ontology: edgeR</div></br>
+
+## Run DESeq2. The general teps are very similar to edgeR above.
+
+```{r run_deseq, eval=FALSE} 
+
+library(DESeq2)
+countDF <- read.delim("results/countDFeByg_JZ.xls", row.names=1, check.names=FALSE)
+targets <- read.delim("targetsPE_trim_JZ.txt", comment="#")
+cmp <- readComp(file="targetsPE_trim_JZ.txt", format="matrix", delim="-")
+deseqDF <- run_DESeq2(countDF=countDF, targets=targets, cmp=cmp[[1]], independent=F)
+
+```
+
+## Add gene descriptions
+
+```{r custom_deseq, eval=FALSE}
+
+library("biomaRt")
+m <- useMart("plants_mart", dataset="athaliana_eg_gene", host="plants.ensembl.org")
+desc2 <- getBM(attributes=c("tair_locus", "description"), mart=m)
+desc2 <- desc2[!duplicated(desc2[,1]),]
+descv2 <- as.character(desc2[,2]); names(descv2) <- as.character(desc2[,1])
+deseqDF <- data.frame(deseqDF, Desc=descv2[rownames(deseqDF)], check.names=FALSE)
+write.table(deseqDF, "./results/deseqglm_allcomp_JZ.xls", quote=F, sep="\t", col.names
+= NA)
+
+```
+
+## Plot DEG results
+
+Filter and plot DEG results for up and down regulated genes. The definition of *up* and 
+*down* is given in the corresponding help file. To open it, type `?filterDEGs` in the R 
+console.
+
+```{r filter_degs_deseq, eval=FALSE}
+
+deseqDF <- read.delim("results/deseqglm_allcomp_JZ.xls", row.names=1, check.names=FALSE) 
+png("results/DEGcounts2_JZ.png")
+DEG_list2 <- filterDEGs(degDF=deseqDF, filter=c(Fold=2, FDR=10))
+dev.off()
+write.table(DEG_list2$Summary, "./results/DEGcounts2_JZ.xls", quote=F, sep="\t", 
+row.names=F)
+
+```
+
+![](results/DEGcounts2_JZ.png)
+<div align="center">Figure 3: Up and down regulated DEGs with FDR of 10%</div></br>
+
+## Venn diagrams of DEG sets
+
+The `overLapper` function can compute Venn intersects for large numbers of sample sets (up 
+to 20 or more) and plots 2-5 way Venn diagrams. A useful feature is the possiblity to 
+combine the counts from several Venn comparisons with the same number of sample sets in a 
+single Venn diagram (here for 4 up and down DEG sets).
+
+
+```{r venn_diagram_deseq, eval=FALSE}
+
+vennsetup2 <- overLapper(DEG_list2$Up[6:9], type="vennsets")
+vennsetdown2 <- overLapper(DEG_list2$Down[6:9], type="vennsets")
+png("results/vennplot2_JZ.png")
+vennPlot(list(vennsetup2, vennsetdown2), mymain="DESeq2", mysub="", colmode=2, ccol=
+c("blue", "red"))
+dev.off()
+
+```
+
+![](results/vennplot2_JZ.png)
+<div align="center">Figure 4: Venn Diagram for 4 Up and Down DEG Sets</div></br>
+
+# GO term enrichment analysis for DESeq2 gene list.
+
+## Obtain gene-to-GO mappings
+
+The following shows how to obtain gene-to-GO mappings from `biomaRt` (here for *A.thaliana*)
+and how to organize them for the downstream GO term enrichment analysis. Alternatively, the
+gene-to-GO mappings can be obtained for many organisms from Bioconductor’s `*.db` genome
+annotation packages or GO annotation files provided by various genome databases. For each 
+annotation this relatively slow preprocessing step needs to be performed only once. 
+Subsequently, the preprocessed data can be loaded with the `load` function as shown in the 
+next subsection.
+
+```{r go_enrich_DB_deseq, eval=FALSE}
+GO.DB()
+```
+## Batch GO term enrichment analysis
+
+Apply the enrichment analysis to the DEG sets obtained the above differential expression 
+analysis. Note, in the following example the `FDR` filter is set here to an unreasonably 
+high value, simply because of the small size of the toy data set used in this vignette. 
+Batch enrichment analysis of many gene sets is performed with the function. When `method=all`, 
+it returns all GO terms passing the p-value cutoff specified under the `cutoff` arguments. 
+When `method=slim`, it returns only the GO terms specified under the `myslimv` argument. The 
+given example shows how a GO slim vector for a specific organism can be obtained from BioMart.
+
+# GO enrichment.
+```{r go_enrich_deseq, eval=FALSE}
+
+# Filter the gene before using the `GO.enrich()` function.
+DEG_list2 <- filterDEGs(degDF=deseqDF, filter=c(Fold=2, FDR=10), plot=FALSE)
+
+# Use GO.enrich(DEG.list, append.name) function to perform GO analysis. DEG.list: filtered
+# gene list, e.g. DEG.list <- filterDEGs(degDF=deseqDF, filter=c(Fold=2, FDR=10), plot=F);
+# append.name: e.g. if append.name <- "deseq", output files are results/BatchResultslim_GO_deseq.xlsx,
+# results/BatchResult_GO_deseq.xlsx.
+GO.enrich(DEG_list, "deseq")
+
+```
+
+# Plot batch GO term results
+The `data.frame` generated by `GOCluster` can be plotted with the `goBarplot` function. 
+Because of the variable size of the sample sets, it may not always be desirable to show the 
+results from different DEG sets in the same bar plot. Plotting single sample sets is achieved
+by subsetting the input data frame as shown in the first line of the following example.
+
+```{r go_enrich_plot_deseq, eval=FALSE} 
+
+# The plot is carried out by `GO.plot.slim(file.path, type, DE.method)`. `file.path`: the 
+# file path of batch GO term results, generated by `GO.enrich()` function; `type`: one of MF,
+# BP, CC; `DE.method`: the method used to generate the DEG list, e.g. one of edge, deseq, vm.
+
+GO.plot.slim("results/BatchResultslim_GO_deseq.xlsx", "CC", "deseq")
+
+```
+<center><img src="results/GOslimbarplotCC_deseq_JZ.png"></center>
+<div align="center">Figure 5: GO Slim Barplot for CC Ontology: DESeq2</div></br>
+
+# Clustering and heat maps
+
+The following example performs hierarchical clustering on the `rlog` transformed expression
+matrix subsetted by the DEGs identified in the above differential expression analysis. It 
+uses a Pearson correlation-based distance measure and complete linkage for cluster joining.
+
+```{r heatmap_deseq, eval=FALSE}
+
+library(pheatmap)
+geneids2 <- unique(as.character(unlist(DEG_list2[[1]])))
+y2 <- assay(rlog(dds))[geneids2, ]
+png("results/heatmap2_JZ.png")
+pheatmap(y2, scale="row", clustering_distance_rows="correlation", clustering_distance_cols
+="correlation", main = "DESeq2 method")
+dev.off()
+
+```
+
+![](results/heatmap2_JZ.png)
+<div align="center">Figure 6: Heat Map with Hierarchical Clustering Dendrograms of DEGs: DESeq2</div></br>
+
+# DE analysis with limma-voom.
+
+```{r DE_voom, eval=FALSE}
+
+# Import targets and normalization.
+targets <- read.delim("targetsPE_trim_JZ.txt", comment="#")
+group <- as.character(targets$Factor)
+countDF <- as.matrix(read.table("./results/countDFeByg_JZ.xls"))
+y <- DGEList(counts = countDF, group = group)
+keep <- rowSums(cpm(y) > 1) >= 2
+y.fil <- y[keep, ]
+y.nor <- calcNormFactors(y.fil, method = "TMM") 
+
+# Perform pairwise comparisons: "M1-A1", "M1-V1", "A1-V1", "M6-A6", "M6-V6", "A6-V6", 
+# "M12-A12", "M12-V12", "A12-V12". Organize the comparison results in a data frame. This 
+# section is similar to "run_edgeR", "run_DESeq2". 
+cmp <- readComp(file="targetsPE_trim_JZ.txt", format="matrix", delim="-")
+de.vm <- model.matrix(~0+targets$Factor)
+colnames(de.vm) <- sub("targets\\$Factor", "", colnames(de.vm))
+con.ma.vm <- makeContrasts(contrasts = paste(cmp[[1]][,1], cmp[[1]][,2], sep = "-"),
+levels = de.vm)
+
+v <- voom(y.nor, de.vm, plot=T)
+vfit <- lmFit(v, de.vm)
+vfit2 <- contrasts.fit(vfit, contrasts=con.ma.vm)
+efit <- eBayes(vfit2)
+
+vmDF <- data.frame(row.names = rownames(efit))
+
+for (i in colnames(efit$coefficients)) {
+
+  tt <- topTable(efit, coef = i, number = nrow(efit))
+  colnames(tt) <- paste0(i, "_", colnames(tt))
+  vmDF <- cbind(vmDF, tt[rownames(vmDF), ]) 
+
+}
+
+```
+
+## Add gene descriptions
+
+```{r custom_annot_vm, eval=FALSE}
+
+library("biomaRt")
+m <- useMart("plants_mart", dataset="athaliana_eg_gene", host="plants.ensembl.org")
+descvm <- getBM(attributes=c("tair_locus", "description"), mart=m)
+descvm <- descvm[!duplicated(descvm[,1]),]
+descvm <- as.character(descvm[,2]); names(descvm) <- as.character(descvm[,1])
+vmDF <- data.frame(vmDF, Desc=descvm[rownames(vmDF)], check.names=FALSE)
+write.table(vmDF, "./results/vmglm_allcomp_JZ.xls", quote=F, sep="\t", col.names
+= NA)
+
+```
+
+
+# Filter the genes with threshold "p.value = 0.1, lfc = 1". The result is the same format of
+"filterDEGs()" output.
+
+```{r filter_DEG_vm, eval=FALSE} 
+
+de.te <- decideTests(efit, p.value = 0.1, lfc = 1)
+sum.de <- summary(de.te)
+de.df <- as.data.frame(de.te)
+
+DEGlistUPorDOWN <- sapply(colnames(de.df), function(x) { inde <- de.df[, x, drop = F] != 0;
+rownames(de.df[inde, ]) }, simplify = F)
+ 
+DEGlistUP <- sapply(colnames(de.df), function(x) { inde <- de.df[, x, drop = F] == 1;
+rownames(de.df[inde, ]) }, simplify = F)
+
+DEGlistDOWN <- sapply(colnames(de.df), function(x) { inde <- de.df[, x, drop = F] == -1;
+rownames(de.df[inde, ]) }, simplify = F)
+
+Summary <- data.frame(row.names = colnames(sum.de), Comparisons = colnames(sum.de), 
+Counts_Up_or_Down = sum.de[1,]+ sum.de[3,], Counts_Up = sum.de[3,], Counts_Down = sum.de[1,])
+
+DEG_listvm <- list(UporDown = DEGlistUPorDOWN, Up = DEGlistUP, Down = DEGlistDOWN, 
+Summary = Summary)
+
+```
+
+
+## Venn diagrams of DEG sets
+
+The `overLapper` function can compute Venn intersects for large numbers of sample sets (up 
+to 20 or more) and plots 2-5 way Venn diagrams. A useful feature is the possiblity to 
+combine the counts from several Venn comparisons with the same number of sample sets in a 
+single Venn diagram (here for 4 up and down DEG sets).
+
+```{r venn_diagram_vm, eval=FALSE}
+
+vennsetupVM <- overLapper(DEG_listvm$Up[6:9], type="vennsets")
+vennsetdownVM <- overLapper(DEG_listvm$Down[6:9], type="vennsets")
+png("results/vennplotVM_JZ.png")
+vennPlot(list(vennsetupVM, vennsetdownVM), mymain="limma-voom", mysub="", colmode=2, ccol=
+c("blue", "red"))
+dev.off()
+
+```
+
+![](results/vennplotVM_JZ.png)
+<div align="center">Figure 4: Venn Diagram for 4 Up and Down DEG Sets: voom</div></br>
+
+# GO term enrichment analysis for voom gene list.
+
+## Obtain gene-to-GO mappings
+
+The following shows how to obtain gene-to-GO mappings from `biomaRt` (here for *A.thaliana*)
+and how to organize them for the downstream GO term enrichment analysis. Alternatively, the
+gene-to-GO mappings can be obtained for many organisms from Bioconductor’s `*.db` genome
+annotation packages or GO annotation files provided by various genome databases. For each 
+annotation this relatively slow preprocessing step needs to be performed only once. 
+Subsequently, the preprocessed data can be loaded with the `load` function as shown in the 
+next subsection.
+
+```{r go_enrich_DB_vm, eval=FALSE}
+GO.DB()
+```
+## Batch GO term enrichment analysis
+
+Apply the enrichment analysis to the DEG sets obtained the above differential expression 
+analysis. Note, in the following example the `FDR` filter is set here to an unreasonably 
+high value, simply because of the small size of the toy data set used in this vignette. 
+Batch enrichment analysis of many gene sets is performed with the function. When `method=all`, 
+it returns all GO terms passing the p-value cutoff specified under the `cutoff` arguments. 
+When `method=slim`, it returns only the GO terms specified under the `myslimv` argument. The 
+given example shows how a GO slim vector for a specific organism can be obtained from BioMart.
+
+# GO enrichment.
+```{r go_enrich_vm, eval=FALSE}
+
+# Use GO.enrich(DEG.list, append.name) function to perform GO analysis. DEG.list: filtered
+# gene list (DEG_listvm); append.name: e.g. if append.name <- "vm", output files are results/BatchResultslim_GO_deseq.xlsx,
+# results/BatchResult_GO_deseq.xlsx.
+GO.enrich(DEG_listvm, "vm")
+
+```
+
+# Plot batch GO term results
+The `data.frame` generated by `GOCluster` can be plotted with the `goBarplot` function. 
+Because of the variable size of the sample sets, it may not always be desirable to show the 
+results from different DEG sets in the same bar plot. Plotting single sample sets is achieved
+by subsetting the input data frame as shown in the first line of the following example.
+
+```{r go_enrich_plot_vm, eval=FALSE} 
+
+# The plot is carried out by `GO.plot.slim(file.path, type, DE.method)`. `file.path`: the 
+# file path of batch GO term results, generated by `GO.enrich()` function; `type`: one of MF,
+# BP, CC; `DE.method`: the method used to generate the DEG list, e.g. one of edge, deseq, vm.
+
+GO.plot.slim("results/BatchResultslim_GO_vm.xlsx", "CC", "vm")
+
+```
+<center><img src="results/GOslimbarplotCC_vm_JZ.png"></center>
+<div align="center">Figure 5: GO Slim Barplot for CC Ontology: voom</div></br>
+
+# Clustering and heat maps
+
+The following example performs hierarchical clustering on the `rlog` transformed expression 
+matrix subsetted by the DEGs identified in the above differential expression analysis. It 
+uses a Pearson correlation-based distance measure and complete linkage for cluster joining.
+
+```{r heatmap_vm, eval=FALSE}
+
+library(pheatmap)
+geneidsVM <- unique(as.character(unlist(DEG_listvm[[1]])))
+y.vm <- assay(rlog(dds))[geneidsVM, ]
+png("results/heatmapvm_JZ.png")
+pheatmap(y.vm, scale="row", clustering_distance_rows="correlation", clustering_distance_cols
+="correlation", main = "limma-voom method")
+dev.off()
+
+```
+
+![](results/heatmapvm_JZ.png)
+<div align="center">Figure 6: Heat Map with Hierarchical Clustering Dendrograms of DEGs: voom</div></br>
+
+# Comparisons of DEGs lists among edgeR, DESeq2, limma-voom. The overlapping DEGs are 
+identified, and their rate relative to each DEG list is calculated. The comparison is 
+summarized in `sum.DEG`.
+
+```{r DEG_comparison, eval=FALSE}
+
+# Make empty data frame for the comparison summary.
+sum.DEG <- data.frame(matrix(NA, nrow=6, ncol=4, dimnames=list(c("Up", 
+"Up.overlap.rate", "Down", "Dow.overlap.rate", "Up.dow", "Up.dow.overlap.rate"), c("edge", 
+"deseq", "voom", "Overlapping"))))
+
+# Identify overlapping DEGs for Up, down, UporDown.
+sum.DEG[1, 4] <- length(Reduce(intersect, list(unlist(DEG_list$Up), unlist(DEG_list2$Up), 
+unlist(DEG_listvm$Up))))
+sum.DEG[3, 4] <- length(Reduce(intersect, list(unlist(DEG_list$Down), unlist(DEG_list2$Down), 
+unlist(DEG_listvm$Down))))
+sum.DEG[5, 4] <- length(Reduce(intersect, list(unlist(DEG_list$UporDown), 
+unlist(DEG_list2$UporDown), unlist(DEG_listvm$UporDown))))
+
+# Populate the data frame with corresponding values.
+sum.DEG[c(5, 1, 3), 1] <- colSums(DEG_list$Summary[, 2:4])
+sum.DEG[c(5, 1, 3), 2] <- colSums(DEG_list2$Summary[, 2:4])
+sum.DEG[c(5, 1, 3), 3] <- colSums(DEG_listvm$Summary[, 2:4])
+
+for (i in c(1, 3, 5)) {
+
+  for (j in c(1, 2, 3)) { sum.DEG[i+1, j] <- round(sum.DEG[i, 4]/sum.DEG[i, j], 2) }
+
+}
+
+```
+
+# Comparison of the diagnostic performance of the three methods, which is shown in ROC curve.
+
+```{r diagnostic_performance_comparison, eval=FALSE} 
+
+library(pROC)
+rocDF <- data.frame(row.names=tolower(rownames(countDF)))
+
+# Import the reference data from original paper. DEGs are set 1, non-DEGs are set 0.
+for (i in dir()[grep(".*_vs_.*", dir())]) {
+
+  ref <- read.table(i, sep = "\t", header = T, row.names = NULL, fill = T) 
+  ref <- ref[grep("at.*", ref[, "Gene"]),]; rownames(ref) <- ref[, "Gene"];
+  ref <- ref[, 34:38]; ref <- na.omit(ref); ref <- ref[rownames(ref) %in% rownames(rocDF), ]
+  ref <- ref[ref[, "Total.Sig"] >= 2,]
+  rocDF[rownames(ref), i] <- 1
+  rocDF[, i][is.na(rocDF[, i])] <- 0
+
+}
+
+# Organize the FDRs of DEGs from the three methods. Non-DEGs are set 1.
+roc.FDR <- function(DE.path, DE.method, FDR.pattern) {
+
+  DE.DF <- read.delim(DE.path, row.names=1, check.names=F)
+  rownames(DE.DF) <- tolower(rownames(DE.DF))
+  DE.DF.FDR <- DE.DF[, grep(FDR.pattern, colnames(DE.DF))]
+
+  for (i in 1:ncol(DE.DF.FDR)) {
+
+    col.name <- paste0(DE.method, "_", colnames(DE.DF.FDR)[i])
+    rocDF[rownames(DE.DF.FDR), col.name] <- DE.DF.FDR[, i]
+    rocDF[, col.name][is.na(rocDF[, col.name])] <- 1
+
+  }
+
+  return(rocDF)
+
+}
+
+# Use roc.FDE() to organize all FDRs progmatically.
+rocDF <- roc.FDR("results/edgeRglm_allcomp_JZ.xls", "edge", "_FDR")
+rocDF <- roc.FDR("results/deseqglm_allcomp_JZ.xls", "deseq", "_FDR")
+rocDF <- roc.FDR("results/vmglm_allcomp_JZ.xls", "vm", "_adj.P.Val") 
+
+
+# Calculate the overall average ROC.
+auc.mean.edge <- (auc.mean1[1]+auc.mean6[1]+auc.mean12[1])/3
+auc.mean.deseq <- (auc.mean1[2]+auc.mean6[2]+auc.mean12[2])/3 
+auc.mean.vm <- (auc.mean1[3]+auc.mean6[3]+auc.mean12[3])/3 
+
+```
+
+<center><img src="results/GOslimbarplotCC_vm_JZ.png"></center>
+<div align="center">Figure 5: GO Slim Barplot for CC Ontology: voom</div></br>
+
+| ![alt text](results/edge_M1-A1_ROC.png "ROC curve")| ![alt text](results/edge_M1-V1_ROC.png "ROC curve")| ![alt text](results/edge_A1-V1_ROC.png "ROC curve")|
+| | | |
+
+# Comparison of effects of edgeR, DESeq2, limma-voom on GO analysis.
+
+```{r GO_comparison, eval=FALSE}
+
+# Make empty data frame.
+sum.GO <- data.frame(matrix(NA, nrow=8, ncol=4, dimnames=list(c("GOID.all", 
+"GOID.all.overlap.rate", "GOID.slim", "GOID.slim.overlap.rate", "SamKey.all", 
+"SamKey.all.overlap.rate", "SamKey.slim", "SamKey.slim.overlap.rate"), c("edge", "deseq", 
+"voom", "Overlap"))))
+
+com0 <- paste(cmp[[1]][,1], cmp[[1]][,2], sep = "-")
+com1 <- paste0(com0, c("_up_down", "_up", "_down"))
+
+# Comparison of "all mappings".
+edg.GOID <- BatchResult[, "GOID"]; sum.GO[1, 1] <- length(edg.GOID)
+deseq.GOID <- BatchResult2[, "GOID"]; sum.GO[1, 2] <- length(deseq.GOID)
+vm.GOID <- BatchResultVM[, "GOID"]; sum.GO[1, 3] <- length(vm.GOID)
+inter.GOID <- Reduce(intersect, list(edg.GOID, deseq.GOID, vm.GOID))
+sum.GO[1, 4] <- length(inter.GOID)
+
+edg.key <- unlist(strsplit(as.character(BatchResult[, "SampleKeys"]), " "))
+sum.GO[5, 1] <- length(edg.key)
+deseq.key <- unlist(strsplit(as.character(BatchResult2[, "SampleKeys"]), " ")) 
+sum.GO[5, 2] <- length(deseq.key)
+vm.key <- unlist(strsplit(as.character(BatchResultVM[, "SampleKeys"]), " ")) 
+sum.GO[5, 3] <- length(vm.key) 
+inter.key <- Reduce(intersect, list(edg.key, deseq.key, vm.key))
+sum.GO[5, 4] <- length(inter.key) 
+
+edg.ta0 <- table(BatchResult[, "Term"])
+edg.ta1 <- names(edg.ta0[edg.ta0 != 0])
+
+deseq.ta0 <- table(BatchResult2[, "Term"])
+deseq.ta1 <- names(deseq.ta0[deseq.ta0 != 0])
+
+vm.ta0 <- table(BatchResultVM[, "Term"])
+vm.ta1 <- names(vm.ta0[vm.ta0 != 0])
+
+# Check if the enriched entities are the same.
+identical(edg.ta1, deseq.ta1)
+identical(edg.ta1, vm.ta1)
+
+# Comparisons for "slim mapping".
+edg.GOID.sl <- BatchResultslim[, "GOID"]; sum.GO[3, 1] <- length(edg.GOID.sl)
+deseq.GOID.sl <- BatchResultslim2[, "GOID"]; sum.GO[3, 2] <- length(deseq.GOID.sl)
+vm.GOID.sl <- BatchResultslimVM[, "GOID"]; sum.GO[3, 3] <- length(vm.GOID.sl)
+inter.GOID.sl <- Reduce(intersect, list(edg.GOID.sl, deseq.GOID.sl, vm.GOID.sl))
+sum.GO[3, 4] <- length(inter.GOID.sl)
+
+edg.key.sl <- unlist(strsplit(as.character(BatchResultslim[, "SampleKeys"]), " "))
+sum.GO[7, 1] <- length(edg.key.sl)
+deseq.key.sl <- unlist(strsplit(as.character(BatchResultslim2[, "SampleKeys"]), " ")) 
+sum.GO[7, 2] <- length(deseq.key.sl)
+vm.key.sl <- unlist(strsplit(as.character(BatchResultslimVM[, "SampleKeys"]), " ")) 
+sum.GO[7, 3] <- length(vm.key.sl) 
+inter.key.sl <- Reduce(intersect, list(edg.key.sl, deseq.key.sl, vm.key.sl))
+sum.GO[7, 4] <- length(inter.key.sl) 
+
+
+edg.ta0.sl <- table(BatchResultslim[, "Term"])
+edg.ta1.sl <- names(edg.ta0.sl[edg.ta0.sl != 0])
+
+deseq.ta0.sl <- table(BatchResultslim2[, "Term"])
+deseq.ta1.sl <- names(deseq.ta0.sl[deseq.ta0.sl != 0])
+
+vm.ta0.sl <- table(BatchResultslimVM[, "Term"])
+vm.ta1.sl <- names(vm.ta0[vm.ta0.sl != 0])
+
+# Check if enriched entities are same.
+identical(edg.ta1.sl, deseq.ta1.sl)
+identical(edg.ta1.sl, vm.ta1.sl)
+
+# Fill in the rate of overlapping entities relative to each categories.
+for(i in c(1, 3, 5, 7)) {
+
+  for (j in c(1, 2, 3)) { sum.GO[i+1, j] <- round(sum.GO[i, 4]/sum.GO[i, j], 2) }
+
+}
+
+```
+
+
+# Version Information
+
+``{r sessionInfo}
+sessionInfo()
+```
+
+# Acknowledgement
+
+In the end, I would like the give the following acknowledgement: Dr. Thomas Girke's 
+instructions in GEN242, and assistance outside class; Jordan Hayes' assistance on biocluster;
+Neerja Katiyar's assistance on some specific questions.
+
+# References
