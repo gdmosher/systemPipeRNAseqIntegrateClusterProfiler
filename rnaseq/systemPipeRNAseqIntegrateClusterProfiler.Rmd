@@ -30,12 +30,12 @@ options(width=100, max.print=1000)
 knitr::opts_chunk$set(
     eval=as.logical(Sys.getenv("KNITR_EVAL", "TRUE")),
     cache=F) # as.logical(Sys.getenv("KNITR_CACHE", "TRUE")))
-doallchunks = TRUE # took 21m46 on pigeon on 2017-0725, now 14m on intel partition
-#doallchunks = FALSE
-doallCPchunks = TRUE
+doallchunks = TRUE # 2017-0731 now 24m (17 real) on intel partition with ALL chunks on
+doallchunks = FALSE
+doallCPchunks = TRUE # if only doall, takes 11m
 #doallCPchunks = FALSE
 doallClusterRunchunks = TRUE
-#doallClusterRunchunks = FALSE
+doallClusterRunchunks = FALSE
 # cat <- function(...) {} # use this to disable all cat() calls below (for windows)
 ```
 
@@ -61,8 +61,9 @@ sort( sapply(mget(ls()),object.size) )
 sort(sapply(ls(), function(x) format(object.size(get(x)), unit = 'auto')))
 library(RenvCheck) # Jordan's environment checker for systemPipeR
 detach(package:RenvCheck)
-search()
-rm(counteByg); rm(align); rm(fqlist); rm(desc); rm(speciesMap)
+search() # list loaded libraries
+rm(counteByg); rm(align); rm(fqlist); rm(desc); rm(speciesMap);
+rm(BatchResult); rm(BatchResultslim); rm(catdb)
 save.image()
 ```
 ```{r setup, echo=FALSE, messages=FALSE, warnings=FALSE}
@@ -522,6 +523,7 @@ save(descv, file="descv.RData") # save for clusterProfiler work
 str(descv)
 head(descv)
 names(descv) # this is the list for clusterProfiler
+length(names(descv))
 edgeDF <- data.frame(edgeDF, Desc=descv[rownames(edgeDF)], check.names=FALSE)
 str(edgeDF)
 summary(edgeDF)
@@ -661,7 +663,7 @@ DEGlist
 DEGlist <- DEGlist[sapply(DEGlist, length) > 0]
 str(DEGlist) # now list of 19 (blanks are gone)
 DEGlist
-save(DEGlist, file="DEGlist.RData") # save for clusterProfiler work
+save(DEGlist, file="DEGlist.RData") # save for clusterProfiler::compareClusters work
 BatchResult <- systemPipeR::GOCluster_Report(catdb=catdb, setlist=DEGlist, method="all", id_type="gene", CLSZ=2, cutoff=0.9, gocats=c("MF", "BP", "CC"), recordSpecGO=NULL)
 # GOCluster_Report is part of GOHyperGALL which is similar to GOstats::GOHyperG
 # GOCluster_Report is batch analysis of many gene sets
@@ -748,12 +750,12 @@ de = names(descv)
 str(de)
 length(de)
 head(de)
-eg = bitr(de, fromType="TAIR", toType=c("ENTREZID","SYMBOL","GO"), OrgDb="org.At.tair.db", drop = FALSE)
+# eg = bitr(de, fromType="TAIR", toType=c("ENTREZID","SYMBOL","GO"), OrgDb="org.At.tair.db", drop = FALSE)
 eg = bitr(de, fromType="TAIR", toType=c("GOALL"), OrgDb="org.At.tair.db", drop = FALSE)
 str(eg)
 head(eg)
-nrow(eg)
-eg
+# nrow(eg)
+# eg[1:10]
 ```
 
 ```{r try.clusterProfiler.pdf.pg5.compareCluster, eval=doallCPchunks}
@@ -766,8 +768,8 @@ str(gcSample)
 # head(gcSample)
 
 xx <- compareCluster(gcSample, fun="enrichKEGG", organism="hsa", pvalueCutoff=0.05)
-str(xx)
-as.data.frame(xx)
+str(xx) # 58 obs. of 10 variables
+# as.data.frame(xx)
 # graphics::plot(xx, type="dot", caption="KEGG Enrichment Comparison")
 
 ## formula interface
@@ -776,56 +778,33 @@ group = c('A', 'A', 'A', 'B', 'B', 'B'),
 othergroup = c('good', 'good', 'bad', 'bad', 'good', 'bad'))
 
 xx.formula <- compareCluster(Entrez~group, data=mydf,
-fun='groupGO', OrgDb='org.Hs.eg.db')
-str(xx.formula)
-as.data.frame(xx.formula) # takes a minute or so
+fun='groupGO', OrgDb='org.Hs.eg.db') # takes a minute or so
+str(xx.formula) # 44 obs. of 7 variables
+as.data.frame(xx.formula)
 
 ## formula interface with more than one grouping variable
 xx.formula.twogroups <- compareCluster(Entrez~group+othergroup, data=mydf,
 fun='groupGO', OrgDb='org.Hs.eg.db')
-str(xx.formula.twogroups)
-as.data.frame(xx.formula.twogroups) # takes a minute or so
+str(xx.formula.twogroups) # 88 obs. of 8 variables
+# as.data.frame(xx.formula.twogroups) # takes a minute or so
 ## End(Not run)
 
 # my code
-# get edgeDF from line 518 above
-edgeDF <- read.delim("results/edgeRglm_allcomp.xls", row.names=1, check.names=FALSE) 
-str(edgeDF)
-summary(edgeDF)
-head(edgeDF)
-# get the DEGlist from line 626 above
-######## load("data/GO/catdb.RData")
-######## rm(catdb)
-DEG_list <- filterDEGs(degDF=edgeDF, filter=c(Fold=2, FDR=50), plot=FALSE)
-str(DEG_list) # Actual DEG_list
-DEG_list
-up_down <- DEG_list$UporDown; names(up_down) <- paste(names(up_down), "_up_down", sep="")
-str(up_down) # list of up_down's for 9 CMP's
-up_down
-up <- DEG_list$Up; names(up) <- paste(names(up), "_up", sep="")
-up
-down <- DEG_list$Down; names(down) <- paste(names(down), "_down", sep="")
-down
-DEGlist <- c(up_down, up, down)
-str(DEGlist) # now list of 27
-DEGlist
-DEGlist <- DEGlist[sapply(DEGlist, length) > 0]
-str(DEGlist) # now list of 19 (blanks are gone)
-DEGlist
 load(file="DEGlist.RData")
+str(DEGlist) # now list of 19 (blanks are gone)
 xxx <- clusterProfiler::compareCluster(DEGlist, fun="enrichKEGG", organism="ath", qvalueCutoff=0.05, pvalueCutoff=0.2)
-str(xxx)
+str(xxx) # 14 obs. of 10 variables
 as.data.frame(xxx)
 
 
 ```
 ```{r try.clusterProfiler.pdf.pg11.enrichGO, eval=doallCPchunks}
-# takes time 1:35
+# takes time 1:15
 
 ## Not run:
 data(geneList)
 str(geneList)
-geneList
+head(geneList)
 de <- names(geneList)[1:100]
 yy <- enrichGO(de, 'org.Hs.eg.db', ont="BP", pvalueCutoff=0.01)
 head(yy)
@@ -842,10 +821,16 @@ if (length(de) == 100) {
 }
 Cutoff
 yyy = clusterProfiler::enrichGO(de, OrgDb = 'org.At.tair.db', keytype="TAIR", ont="MF", pAdjustMethod = "BH", qvalueCutoff=Cutoff, pvalueCutoff=Cutoff)
-ego = yyy
-head(summary(yyy))
+ego = yyy # ego is for visualization
+str(yyy)
+# head(summary(yyy))
 yyy2 = DOSE::setReadable(yyy, OrgDb = 'org.At.tair.db', keytype="TAIR")
-head(summary(yyy2))
+str(yyy2)
+# head(summary(yyy2))
+save(ego, file="ego.RData") # save for clusterProfiler visualization
+```
+```{r clusterProfiler.ego.Visualization, eval=T}
+load("ego.RData")
 # clusterProfiler Visualization
 barplot(ego, showCategory=8)
 dotplot(ego)
@@ -877,10 +862,10 @@ dev.off()
 
 ## Not run:
 data(geneList)
+head(geneList)
 de <- names(geneList)[1:100]
 de <- names(geneList)
-de
-geneList
+# head(de)
 yy <- enrichKEGG(de, qvalueCutoff=1, pvalueCutoff=1)
 eKEGG = yy
 head(yy)
@@ -895,7 +880,7 @@ load(file="descv.RData")
 length(names(descv))
 de = names(descv)[1:100]
 de = names(descv)
-de
+head(de)
 if (length(de) == 100) {
 	Cutoff = 1.0
 } else {
@@ -903,9 +888,11 @@ if (length(de) == 100) {
 }
 Cutoff
 yyy = clusterProfiler::enrichKEGG(de, organism='ath',  pvalueCutoff=Cutoff, qvalueCutoff=Cutoff)
-head(summary(yyy))
+str(yyy)
+# head(summary(yyy))
 yyy2 = DOSE::setReadable(yyy, OrgDb = 'org.At.tair.db', keytype="TAIR")
-head(summary(yyy2))
+str(yyy2)
+# head(summary(yyy2))
 
 
 ```
@@ -915,43 +902,50 @@ head(summary(yyy2))
 ## Not run:
 data(gcSample)
 yy <- groupGO(gcSample[[1]], 'org.Hs.eg.db', ont="BP", level=2)
-head(summary(yy))
+str(yy)
+# head(summary(yy))
 #plot(yy)
 
 # my code
-# get edgeDF from line 518 above
-edgeDF <- read.delim("results/edgeRglm_allcomp.xls", row.names=1, check.names=FALSE) 
-str(edgeDF)
-summary(edgeDF)
-head(edgeDF)
-# get the DEGlist from line 626 above
-load("data/GO/catdb.RData")
-DEG_list <- filterDEGs(degDF=edgeDF, filter=c(Fold=2, FDR=50), plot=FALSE)
-str(DEG_list) # Actual DEG_list
-DEG_list
-up_down <- DEG_list$UporDown; names(up_down) <- paste(names(up_down), "_up_down", sep="")
-str(up_down) # list of up_down's for 9 CMP's
-up_down
-up <- DEG_list$Up; names(up) <- paste(names(up), "_up", sep="")
-up
-down <- DEG_list$Down; names(down) <- paste(names(down), "_down", sep="")
-down
-DEGlist <- c(up_down, up, down)
-str(DEGlist) # now list of 27
-DEGlist
-DEGlist <- DEGlist[sapply(DEGlist, length) > 0]
-str(DEGlist) # now list of 19 (blanks are gone)
-DEGlist
+rebuild_DEGlist_deprecated <- function() {
+	# get edgeDF from line 518 above
+	edgeDF <- read.delim("results/edgeRglm_allcomp.xls", row.names=1, check.names=FALSE) 
+	str(edgeDF)
+	summary(edgeDF)
+	head(edgeDF)
+	# get the DEGlist from line 626 above
+	load("data/GO/catdb.RData")
+	DEG_list <- filterDEGs(degDF=edgeDF, filter=c(Fold=2, FDR=50), plot=FALSE)
+	str(DEG_list) # Actual DEG_list
+	DEG_list
+	up_down <- DEG_list$UporDown; names(up_down) <- paste(names(up_down), "_up_down", sep="")
+	str(up_down) # list of up_down's for 9 CMP's
+	up_down
+	up <- DEG_list$Up; names(up) <- paste(names(up), "_up", sep="")
+	up
+	down <- DEG_list$Down; names(down) <- paste(names(down), "_down", sep="")
+	down
+	DEGlist <- c(up_down, up, down)
+	str(DEGlist) # now list of 27
+	DEGlist
+	DEGlist <- DEGlist[sapply(DEGlist, length) > 0]
+	str(DEGlist) # now list of 19 (blanks are gone)
+	DEGlist
+}
 load(file="DEGlist.RData")
 str(DEGlist) # now list of 19 (blanks are gone)
 
 yyyyBP <- clusterProfiler::groupGO(DEGlist[[1]], OrgDb = 'org.At.tair.db', keytype="TAIR", ont="BP", level=2)
-ggo = yyyyBP
+ggo = yyyyBP # ggo is for the visualization
 head(summary(yyyyBP))
 yyyyCC <- clusterProfiler::groupGO(DEGlist[[1]], OrgDb = 'org.At.tair.db', keytype="TAIR", ont="CC", level=2)
 head(summary(yyyyCC))
 yyyyMF <- clusterProfiler::groupGO(DEGlist[[1]], OrgDb = 'org.At.tair.db', keytype="TAIR", ont="MF", level=2)
 head(summary(yyyyMF))
+save(ggo, file="ggo.RData") # save for clusterProfiler visualization
+```
+```{r clusterProfiler.ggo.Visualization, eval=T}
+load("ggo.RData")
 # clusterProfiler Visualization
 barplot(ggo, drop=TRUE, showCategory=12)
 grDevices::pdf("results/cP_ggo_barplot.pdf")
