@@ -23,17 +23,48 @@ time Rscript -e "rmarkdown::render('systemPipeRNAseq.Rmd', c('html_document'), c
 -->
 
 ```{r style, echo = FALSE, results = 'asis'}
+system("echo HOSTNAME HOSTNAME HOSTNAME HOSTNAME HOSTNAME HOSTNAME HOSTNAME")
+system("hostname") # should return name of a compute node starting with i or c 
 BiocStyle::markdown()
 options(width=100, max.print=1000)
 knitr::opts_chunk$set(
     eval=as.logical(Sys.getenv("KNITR_EVAL", "TRUE")),
     cache=F) # as.logical(Sys.getenv("KNITR_CACHE", "TRUE")))
-doallchunks = FALSE
-doallCPchunks = FALSE
-doallchunks = TRUE
+doallchunks = TRUE # took 21m46 on pigeon on 2017-0725, now 14m on intel partition
+#doallchunks = FALSE
 doallCPchunks = TRUE
+#doallCPchunks = FALSE
+doallClusterRunchunks = TRUE
+#doallClusterRunchunks = FALSE
+# cat <- function(...) {} # use this to disable all cat() calls below (for windows)
 ```
 
+```{r node_environment, eval=FALSE}
+# push `F2` on your keyboard to open interactive R session
+q("no") # closes R session on head node
+srun --x11 --partition=intel --mem=2gb --cpus-per-task 1 --ntasks 1 --time 07-0:00:00 --pty bash -l
+
+R
+```
+
+Now check whether your R session is running on a computer node of the cluster and not on a head node.
+
+```{r r_environment, eval=doallchunks}
+system("echo HOSTNAME HOSTNAME HOSTNAME HOSTNAME HOSTNAME HOSTNAME HOSTNAME")
+system("hostname") # should return name of a compute node starting with i or c 
+getwd() # checks current working directory of R session
+dir() # returns content of current working directory
+```
+```{r r_environment2, eval=F}
+sort( sapply(ls(),function(x){object.size(get(x))}))
+sort( sapply(mget(ls()),object.size) )
+sort(sapply(ls(), function(x) format(object.size(get(x)), unit = 'auto')))
+library(RenvCheck) # Jordan's environment checker for systemPipeR
+detach(package:RenvCheck)
+search()
+rm(counteByg); rm(align); rm(fqlist); rm(desc); rm(speciesMap)
+save.image()
+```
 ```{r setup, echo=FALSE, messages=FALSE, warnings=FALSE}
 suppressPackageStartupMessages({
     library(systemPipeR)
@@ -106,21 +137,8 @@ script can then be sent from Vim on the login (head) node to an open R session r
 on the corresponding computer node. This is important since Tmux sessions
 should not be run on the computer nodes. 
 
-```{r node_environment, eval=FALSE}
-# push `F2` on your keyboard to open interactive R session
-q("no") # closes R session on head node
-srun --x11 --partition=intel --mem=2gb --cpus-per-task 1 --ntasks 1 --time 30-0:00:00 --pty bash -l
-
-R
-```
-
-Now check whether your R session is running on a computer node of the cluster and not on a head node.
-
-```{r r_environment, eval=doallchunks}
-system("hostname") # should return name of a compute node starting with i or c 
-getwd() # checks current working directory of R session
-dir() # returns content of current working directory
-```
+NOTE: chunks node_environment and r_environment were here,
+	now moved to top of file for convenience.
 
 ## Required packages and resources
 
@@ -145,8 +163,10 @@ targetspath
 # system('cat ') # dangerous, puts cat on stdin - hangs batch jobs
 # system(paste0('cat ', targetspath))
 cat(system('cat "/bigdata/bioinfo/pkgadmin/opt/linux/centos/7.x/x86_64/pkgs/R/3.4.0/lib64/R/library/systemPipeR/extdata/targets.txt"', intern = T), sep = '\n')
-targets <- read.delim(targetspath, comment.char = "#")[,1:4]
+targets <- read.delim(targetspath, comment.char = "#")[,1:4] # all rows, 4 columns
+str(targets)
 targets
+# now look inside the fastq.gz file at the seq ID, sequence and quality data
 cat(system(paste0('gzip -cd ', targets[1,1], '.gz | head'), intern = T), sep = '\n')
 cat(system('ls -l data', intern = T), sep = '\n') # system output doesn't knit to html
 cat(system('ls -l', intern = T), sep = '\n') # system output doesn't knit to html
@@ -175,9 +195,9 @@ args <- systemArgs(sysma="param/trim.param", mytargets="targets.txt")
 args
 names(args); modules(args); cores(args); outpaths(args); sysargs(args)
 showClass("SYSargs")
-preprocessReads(args=args, Fct="trimLRPatterns(Rpattern='GCCCGGGTAA', subject=fq)",
+systemPipeR::preprocessReads(args=args, Fct="Biostrings::trimLRPatterns(Rpattern='GCCCGGGTAA', subject=fq)",
                 batchsize=100000, overwrite=TRUE, compress=TRUE)
-writeTargetsout(x=args, file="targets_trim.txt", overwrite=TRUE)
+systemPipeR::writeTargetsout(x=args, file="targets_trim.txt", overwrite=TRUE)
 outpaths(args)[1]
 cat(system(paste0('cat targets_trim.txt'), intern = T), sep = '\n')
 cat(system(paste0('zcat results/SRR446027_1.fastq_trim.gz | head'), intern = T), sep = '\n')
@@ -205,20 +225,23 @@ outpaths(args)
 sysargs(args) # shows tophat calls
 sysargs(args)[1] # Command-line parameters for first FASTQ file
 cat('Next line takes time 6 minutes.\n') # takes 6 minutes
-fqlist <- seeFastq(fastq=infile1(args), batchsize=100000, klength=8)
+fqlist <- systemPipeR::seeFastq(fastq=infile1(args), batchsize=100000, klength=8)
 save(fqlist, file="data/GO/fqlist.RData")
 load("data/GO/fqlist.RData")
-cat('fqlist is a Large list (18 elements, 1.3 Mb)\n')
-fqlist[[1]][3] # lots of data here, best to visualize with seeFastqPlot?
-fqlist[['M1A']][1]
-fqlist[['M1A']][2]
-fqlist[['M1A']][3]
-fqlist[['M1A']][4]
-fqlist[['M1A']][5]
-fqlist[['M1A']][6]
-fqlist[['M1A']][7]
-fqlist[['M1A']][8]
-fqlist[['M1A']][9]
+cat('fqlist is a Large list (18 * 9 elements, 1.3 Mb)\n')
+str(fqlist, max.level = 1)
+str(fqlist[[1]])
+if (FALSE) {
+fqlist[[1]][1] # lots of data here, best to visualize with seeFastqPlot?
+fqlist[['M1A']]['fqstats']
+fqlist[['M1A']]['astats']
+fqlist[['M1A']]['bstats']
+fqlist[['M1A']]['cstats']
+fqlist[['M1A']]['dstats']
+fqlist[['M1A']]['estats']
+fqlist[['M1A']]['fstats']
+fqlist[['M1A']]['gstats']
+fqlist[['M1A']]['hstats']
 summary(fqlist)
 summary(fqlist[['M1A']])
 summary(fqlist[['M1A']][[1]])
@@ -230,8 +253,9 @@ summary(fqlist[['M1A']][[6]])
 summary(fqlist[['M1A']][[7]])
 summary(fqlist[['M1A']][[8]])
 summary(fqlist[['M1A']][[9]])
+}
 pdf("./results/fastqReport.pdf", height=18, width=4*length(fqlist))
-seeFastqPlot(fqlist)
+systemPipeR::seeFastqPlot(fqlist)
 dev.off()
 # Neerja help me read/understand the pdf contents
 ``` 
@@ -257,12 +281,12 @@ sysargs(args)[1] # Command-line parameters for first FASTQ file
 Submission of alignment jobs to compute cluster, here using 72 CPU cores
 (18 `qsub` processes each with 4 CPU cores).
 
-```{r tophat_alignment2, eval=doallchunks}
+```{r tophat_alignment2, eval=doallClusterRunchunks}
 # ?moduleload
 # q
 args
 modules(args)
-moduleload(modules(args))
+systemPipeR::moduleload(modules(args))
 # next line says Building a SMALL index
 system('pwd')
 cat(system("bowtie2-build ./data/tair10.fasta ./data/tair10.fasta > results/bowtie2-build.out 2> results/bowtie2-build.err", intern = T), sep = '\n')
@@ -280,8 +304,9 @@ outpaths(args)
 sysargs(args) # shows tophat calls
 cat(system(paste0('cat .BatchJobs.R'), intern = T), sep = '\n')
 cat(system(paste0('cat slurm.tmpl'), intern = T), sep = '\n')
-reg <- clusterRun(args, conffile=".BatchJobs.R", template="slurm.tmpl", Njobs=18, runid="01",
+reg <- systemPipeR::clusterRun(args, conffile=".BatchJobs.R", template="slurm.tmpl", Njobs=18, runid="01",
                   resourceList=resources)
+# creates results/star.tophat # do I want to look at these also?
 # don't submit for 20 hours on short-list!
 # 1 minute
 reg
@@ -290,13 +315,14 @@ waitForJobs(reg)
 
 ## Read mapping with `HISAT2`
 
-```{r hisat_alignment2, eval=doallchunks}
+```{r hisat_alignment2, eval=doallClusterRunchunks}
 args <- systemArgs(sysma="param/hisat2.param", mytargets="targets.txt")
+cat(system(paste0('cat param/hisat2.param'), intern = T), sep = '\n')
 names(args)
 modules(args)
 cores(args)
 outpaths(args)
-sysargs(args) # shows tophat calls
+sysargs(args) # shows hisat2 calls
 sysargs(args)[1] # Command-line parameters for first FASTQ file
 moduleload(modules(args))
 system('pwd')
@@ -327,7 +353,7 @@ The following provides an overview of the number of reads in each sample
 and how many of them aligned to the reference.
 
 ```{r align_stats, eval=doallchunks}
-read_statsDF <- alignStats(args=args) 
+read_statsDF <- systemPipeR::alignStats(args=args) 
 read_statsDF
 write.table(read_statsDF, "results/alignStats.xls", row.names=FALSE, quote=FALSE, sep="\t")
 ```
@@ -367,32 +393,37 @@ to separate files in the directory of this project. Parallelization is
 achieved with the `BiocParallel` package, here using 8 CPU cores.
 
 ```{r read_counting1, eval=T}
+# uses >3GB memory
 library("GenomicFeatures"); library(BiocParallel)
-cat(system(paste0('cat data/tair10.gff'), intern = T), sep = '\n')
-txdb <- makeTxDbFromGFF(file="data/tair10.gff", format="gff", dataSource="TAIR", organism="Arabidopsis thaliana")
+cat(system(paste0('head data/tair10.gff'), intern = T), sep = '\n')
+cat(system(paste0('tail data/tair10.gff'), intern = T), sep = '\n')
+txdb <- GenomicFeatures::makeTxDbFromGFF(file="data/tair10.gff", format="gff", dataSource="TAIR", organism="Arabidopsis thaliana")
 txdb
 saveDb(txdb, file="./data/tair10.sqlite")
 txdb <- loadDb("./data/tair10.sqlite")
 outpaths(args)[1]
-(align <- readGAlignments(outpaths(args)[1])) # Demonstrates how to read bam file into R
+(align <- GenomicAlignments::readGAlignments(outpaths(args)[1])) # Demonstrates how to read bam file into R
 align
 
-eByg <- exonsBy(txdb, by=c("gene"))
+eByg <- GenomicFeatures::exonsBy(txdb, by=c("gene"))
 eByg
-bfl <- BamFileList(outpaths(args), yieldSize=50000, index=character())
+bfl <- Rsamtools::BamFileList(outpaths(args), yieldSize=50000, index=character())
 bfl
 multicoreParam <- MulticoreParam(workers=2); register(multicoreParam); registered()
 multicoreParam
-counteByg <- bplapply(bfl, function(x) summarizeOverlaps(eByg, x, mode="Union", 
+counteByg <- bplapply(bfl, function(x) GenomicAlignments::summarizeOverlaps(eByg, x, mode="Union", 
                                                ignore.strand=TRUE, 
                                                inter.feature=FALSE, 
                                                singleEnd=TRUE)) 
+str(counteByg)
 counteByg
-countDFeByg <- sapply(seq(along=counteByg), function(x) assays(counteByg[[x]])$counts)
+countDFeByg <- sapply(seq(along=counteByg), function(x) SummarizedExperiment::assays(counteByg[[x]])$counts)
+str(countDFeByg)
 countDFeByg
 rownames(countDFeByg) <- names(rowRanges(counteByg[[1]])); colnames(countDFeByg) <- names(bfl)
 rownames(countDFeByg)
 rpkmDFeByg <- apply(countDFeByg, 2, function(x) returnRPKM(counts=x, ranges=eByg))
+str(rpkmDFeByg)
 rpkmDFeByg
 write.table(countDFeByg, "results/countDFeByg.xls", col.names=NA, quote=FALSE, sep="\t")
 write.table(rpkmDFeByg, "results/rpkmDFeByg.xls", col.names=NA, quote=FALSE, sep="\t")
@@ -426,20 +457,24 @@ the `hclust` function and the result is plotted as a dendrogram
 ```{r sample_tree, eval=T}
 library(DESeq2, quietly=TRUE); library(ape,  warn.conflicts=FALSE)
 countDF <- as.matrix(read.table("./results/countDFeByg.xls"))
-countDF
-targetsin(args)$SampleName
+str(countDF)
+countDF # exactly the same as countDFeByg above
+countDF[1:6,1:18]
+head(countDF)
+showClass("SYSargs")
+systemPipeR::targetsin(args)$SampleName
 targetsin(args)$Factor
 colData <- data.frame(row.names=targetsin(args)$SampleName, condition=targetsin(args)$Factor)
 colData
-dds <- DESeqDataSetFromMatrix(countData = countDF, colData = colData, design = ~ condition)
+dds <- DESeq2::DESeqDataSetFromMatrix(countData = countDF, colData = colData, design = ~ condition)
 dds
-d <- cor(assay(rlog(dds)), method="spearman")
+d <- stats::cor(SummarizedExperiment::assay(DESeq2::rlog(dds)), method="spearman")
 d
-hc <- hclust(dist(1-d))
+hc <- stats::hclust(dist(1-d))
 hc
-pdf("results/sample_tree.pdf")
-plot.phylo(as.phylo(hc), type="p", edge.col="blue", edge.width=2, show.node.label=TRUE, no.margin=TRUE)
-dev.off()
+grDevices::pdf("results/sample_tree.pdf")
+ape::plot.phylo(ape::as.phylo(hc), type="p", edge.col="blue", edge.width=2, show.node.label=TRUE, no.margin=TRUE)
+grDevices::dev.off()
 ```
 
 ![](results/sample_tree.png)
@@ -458,12 +493,13 @@ comparisons used by this analysis are defined in the header lines of the
 ```{r run_edger, eval=T}
 library(edgeR)
 countDF <- read.delim("results/countDFeByg.xls", row.names=1, check.names=FALSE)
-countDF
-targets <- read.delim("targets.txt", comment="#")
+head(countDF) # best way to see counts!
+targets <- utils::read.delim("targets.txt", comment="#")
 targets
-cmp <- readComp(file="targets.txt", format="matrix", delim="-")
+cmp <- systemPipeR::readComp(file="targets.txt", format="matrix", delim="-")
 cmp
-edgeDF <- run_edgeR(countDF=countDF, targets=targets, cmp=cmp[[1]], independent=FALSE, mdsplot="")
+edgeDF <- systemPipeR::run_edgeR(countDF=countDF, targets=targets, cmp=cmp[[1]], independent=FALSE, mdsplot="")
+str(edgeDF)
 edgeDF
 ```
 
@@ -472,18 +508,20 @@ Add gene descriptions
 ```{r custom_annot, eval=T}
 # useMart() call fails if mart is down for maintenance
 library("biomaRt")
-m <- useMart("plants_mart", dataset="athaliana_eg_gene", host="plants.ensembl.org")
+m <- biomaRt::useMart("plants_mart", dataset="athaliana_eg_gene", host="plants.ensembl.org")
 m
-desc <- getBM(attributes=c("tair_locus", "description"), mart=m)
+desc <- biomaRt::getBM(attributes=c("tair_locus", "description"), mart=m)
 # desc # too big to print
 str(desc)
 head(desc)
 # m <- useMart("ensembl", dataset="xmaculatus_gene_ensembl", host="ensembl.org")
 # desc <- getBM(attributes=c("band", "description"), mart=m)
-desc <- desc[!duplicated(desc[,1]),]
+desc <- desc[!base::duplicated(desc[,1]),]
 descv <- as.character(desc[,2]); names(descv) <- as.character(desc[,1])
+save(descv, file="descv.RData") # save for clusterProfiler work
 str(descv)
 head(descv)
+names(descv) # this is the list for clusterProfiler
 edgeDF <- data.frame(edgeDF, Desc=descv[rownames(edgeDF)], check.names=FALSE)
 str(edgeDF)
 summary(edgeDF)
@@ -499,9 +537,15 @@ file. To open it, type `?filterDEGs` in the R console.
 
 ```{r filter_degs, eval=T}
 edgeDF <- read.delim("results/edgeRglm_allcomp.xls", row.names=1, check.names=FALSE) 
+str(edgeDF)
+summary(edgeDF)
+head(edgeDF)
 pdf("results/DEGcounts.pdf")
-DEG_list <- filterDEGs(degDF=edgeDF, filter=c(Fold=2, FDR=20))
+DEG_list <- systemPipeR::filterDEGs(degDF=edgeDF, filter=c(Fold=2, FDR=20))
+# finally a DEG list
+str(DEG_list)
 DEG_list
+DEG_list$Summary
 dev.off()
 write.table(DEG_list$Summary, "./results/DEGcounts.xls", quote=FALSE, sep="\t", row.names=FALSE)
 ```
@@ -538,7 +582,7 @@ dev.off()
 The following shows how to obtain gene-to-GO mappings from `biomaRt` (here for *A.
 thaliana*) and how to organize them for the downstream GO term
 enrichment analysis. Alternatively, the gene-to-GO mappings can be
-obtained for many organisms from Bioconductor’s `*.db` genome annotation
+obtained for many organisms from Bioconductors  `.db` genome annotation
 packages or GO annotation files provided by various genome databases.
 For each annotation this relatively slow preprocessing step needs to be
 performed only once. Subsequently, the preprocessed data can be loaded
@@ -547,19 +591,22 @@ with the `load` function as shown in the next subsection.
 ```{r get_go_annot, eval=doallchunks}
 # useMart() fails if mart is down for maintenance
 library("biomaRt")
-if (TRUE) {
 
 listMarts(host="plants.ensembl.org")
 m <- useMart("plants_mart", host="plants.ensembl.org")
 listDatasets(m)
+listDatasets(m)[44,]
 m <- useMart("plants_mart", dataset="athaliana_eg_gene", host="plants.ensembl.org")
 listAttributes(m) # Choose data types you want to download
 go <- getBM(attributes=c("go_id", "tair_locus", "name_1006"), mart=m)
+str(go)
 go <- go[go[,3]!="",]; go[,3] <- as.character(go[,3])
+str(go)
 go[go[,3]=="molecular_function", 3] <- "F"; go[go[,3]=="biological_process", 3] <- "P"; go[go[,3]=="cellular_component", 3] <- "C"
+str(go)
 go[1:4,]
 
-} else {
+if (FALSE) { 
 
 listMarts() # To choose BioMart database
 listMarts(host="plants.ensembl.org")
@@ -575,7 +622,8 @@ go[1:4,]
 }
 dir.create("./data/GO")
 write.table(go, "data/GO/GOannotationsBiomart_mod.txt", quote=FALSE, row.names=FALSE, col.names=FALSE, sep="\t")
-catdb <- makeCATdb(myfile="data/GO/GOannotationsBiomart_mod.txt", lib=NULL, org="", colno=c(1,2,3), idconv=NULL)
+catdb <- systemPipeR::makeCATdb(myfile="data/GO/GOannotationsBiomart_mod.txt", lib=NULL, org="", colno=c(1,2,3), idconv=NULL)
+# makeCATdb() is part of systemPipeR::GOHyperGALL
 catdb
 save(catdb, file="data/GO/catdb.RData")
 ```
@@ -598,18 +646,26 @@ BioMart.
 library("biomaRt")
 load("data/GO/catdb.RData")
 DEG_list <- filterDEGs(degDF=edgeDF, filter=c(Fold=2, FDR=50), plot=FALSE)
+str(DEG_list) # Actual DEG_list
 DEG_list
 up_down <- DEG_list$UporDown; names(up_down) <- paste(names(up_down), "_up_down", sep="")
+str(up_down) # list of up_down's for 9 CMP's
 up_down
 up <- DEG_list$Up; names(up) <- paste(names(up), "_up", sep="")
 up
 down <- DEG_list$Down; names(down) <- paste(names(down), "_down", sep="")
 down
 DEGlist <- c(up_down, up, down)
+str(DEGlist) # now list of 27
 DEGlist
 DEGlist <- DEGlist[sapply(DEGlist, length) > 0]
+str(DEGlist) # now list of 19 (blanks are gone)
 DEGlist
-BatchResult <- GOCluster_Report(catdb=catdb, setlist=DEGlist, method="all", id_type="gene", CLSZ=2, cutoff=0.9, gocats=c("MF", "BP", "CC"), recordSpecGO=NULL)
+save(DEGlist, file="DEGlist.RData") # save for clusterProfiler work
+BatchResult <- systemPipeR::GOCluster_Report(catdb=catdb, setlist=DEGlist, method="all", id_type="gene", CLSZ=2, cutoff=0.9, gocats=c("MF", "BP", "CC"), recordSpecGO=NULL)
+# GOCluster_Report is part of GOHyperGALL which is similar to GOstats::GOHyperG
+# GOCluster_Report is batch analysis of many gene sets
+str(BatchResult)
 BatchResult
 library("biomaRt")
 m <- useMart("plants_mart", dataset="athaliana_eg_gene", host="plants.ensembl.org")
@@ -617,6 +673,7 @@ m <- useMart("plants_mart", dataset="athaliana_eg_gene", host="plants.ensembl.or
 goslimvec <- as.character(getBM(attributes=c("goslim_goa_accession"), mart=m)[,1])
 goslimvec
 BatchResultslim <- GOCluster_Report(catdb=catdb, setlist=DEGlist, method="slim", id_type="gene", myslimv=goslimvec, CLSZ=10, cutoff=0.01, gocats=c("MF", "BP", "CC"), recordSpecGO=NULL)
+str(BatchResultslim)
 BatchResultslim
 save(BatchResultslim, file="data/GO/BatchResultslim.RData")
 ```
@@ -632,8 +689,10 @@ shown in the first line of the following example.
 ```{r go_plot, eval=doallchunks}
 load("data/GO/BatchResultslim.RData")
 gos <- BatchResultslim[grep("M6-V6_up_down", BatchResultslim$CLID), ]
+str(gos)
 gos
 gos <- BatchResultslim
+str(gos)
 gos
 pdf("GOslimbarplotMF.pdf", height=8, width=10); goBarplot(gos, gocat="MF"); dev.off()
 goBarplot(gos, gocat="BP")
@@ -666,20 +725,50 @@ dev.off()
 
 # (9)clusterProfiler Integration
 
-```{r try.clusterProfiler.pdf.pg5.compareCluster, eval=T}
-# takes time 2:25
+```{r try.clusterProfiler.html.bitr, eval=doallCPchunks}
+library(org.Hs.eg.db) # Homo sapiens
+keytypes(org.Hs.eg.db)
+x <- c("GPX3",  "GLRX",   "LBP",   "CRYAB", "DEFB1", "HCLS1",   "SOD2",   "HSPA2",
+       "ORM1",  "IGFBP1", "PTHLH", "GPC3",  "IGFBP3","TOB1",    "MITF",   "NDRG1",
+       "NR1H4", "FGFR3",  "PVR",   "IL6",   "PTPRM", "ERBB2",   "NID2",   "LAMB1",
+       "COMP",  "PLS3",   "MCAM",  "SPP1",  "LAMC1", "COL4A2",  "COL4A1", "MYOC",
+       "ANXA4", "TFPI2",  "CST6",  "SLPI",  "TIMP2", "CPM",     "GGT1",   "NNMT",
+       "MAL",   "EEF1A2", "HGD",   "TCN2",  "CDA",   "PCCA",    "CRYM",   "PDXK",
+       "STC1",  "WARS",  "HMOX1", "FXYD2", "RBP4",   "SLC6A12", "KDELR3", "ITM2B")
+eg = bitr(x, fromType="SYMBOL", toType="ENTREZID", OrgDb="org.Hs.eg.db")
+head(eg)
+eg
 
+library(org.At.tair.db) # Arabidopsis thaliana
+keytypes(org.At.tair.db)
+load(file="descv.RData")
+length(names(descv)) # descv is from line 521 
+de = names(descv)[1:100]
+de = names(descv)
+str(de)
+length(de)
+head(de)
+eg = bitr(de, fromType="TAIR", toType=c("ENTREZID","SYMBOL","GO"), OrgDb="org.At.tair.db", drop = FALSE)
+eg = bitr(de, fromType="TAIR", toType=c("GOALL"), OrgDb="org.At.tair.db", drop = FALSE)
+str(eg)
+head(eg)
+nrow(eg)
+eg
+```
 
+```{r try.clusterProfiler.pdf.pg5.compareCluster, eval=doallCPchunks}
+# takes time 5:00
+# still need to work on two formula interfaces
 
 ## Not run:
 data(gcSample)
 str(gcSample)
-head(gcSample)
+# head(gcSample)
 
 xx <- compareCluster(gcSample, fun="enrichKEGG", organism="hsa", pvalueCutoff=0.05)
 str(xx)
 as.data.frame(xx)
-# plot(xx, type="dot", caption="KEGG Enrichment Comparison")
+# graphics::plot(xx, type="dot", caption="KEGG Enrichment Comparison")
 
 ## formula interface
 mydf <- data.frame(Entrez=c('1', '100', '1000', '100101467', '100127206', '100128071'),
@@ -698,10 +787,40 @@ str(xx.formula.twogroups)
 as.data.frame(xx.formula.twogroups) # takes a minute or so
 ## End(Not run)
 
+# my code
+# get edgeDF from line 518 above
+edgeDF <- read.delim("results/edgeRglm_allcomp.xls", row.names=1, check.names=FALSE) 
+str(edgeDF)
+summary(edgeDF)
+head(edgeDF)
+# get the DEGlist from line 626 above
+######## load("data/GO/catdb.RData")
+######## rm(catdb)
+DEG_list <- filterDEGs(degDF=edgeDF, filter=c(Fold=2, FDR=50), plot=FALSE)
+str(DEG_list) # Actual DEG_list
+DEG_list
+up_down <- DEG_list$UporDown; names(up_down) <- paste(names(up_down), "_up_down", sep="")
+str(up_down) # list of up_down's for 9 CMP's
+up_down
+up <- DEG_list$Up; names(up) <- paste(names(up), "_up", sep="")
+up
+down <- DEG_list$Down; names(down) <- paste(names(down), "_down", sep="")
+down
+DEGlist <- c(up_down, up, down)
+str(DEGlist) # now list of 27
+DEGlist
+DEGlist <- DEGlist[sapply(DEGlist, length) > 0]
+str(DEGlist) # now list of 19 (blanks are gone)
+DEGlist
+load(file="DEGlist.RData")
+xxx <- clusterProfiler::compareCluster(DEGlist, fun="enrichKEGG", organism="ath", qvalueCutoff=0.05, pvalueCutoff=0.2)
+str(xxx)
+as.data.frame(xxx)
+
 
 ```
-```{r try.clusterProfiler.pdf.pg11.enrichGO, eval=T}
-# takes time :40
+```{r try.clusterProfiler.pdf.pg11.enrichGO, eval=doallCPchunks}
+# takes time 1:35
 
 ## Not run:
 data(geneList)
@@ -712,6 +831,45 @@ yy <- enrichGO(de, 'org.Hs.eg.db', ont="BP", pvalueCutoff=0.01)
 head(yy)
 ## End(Not run)
 
+# my code
+load(file="descv.RData")
+de = names(descv)[1:100]
+de = names(descv)
+if (length(de) == 100) {
+	Cutoff = 1.0
+} else {
+	Cutoff = 0.55 # 0.01 # try 1.0 if needed
+}
+Cutoff
+yyy = clusterProfiler::enrichGO(de, OrgDb = 'org.At.tair.db', keytype="TAIR", ont="MF", pAdjustMethod = "BH", qvalueCutoff=Cutoff, pvalueCutoff=Cutoff)
+ego = yyy
+head(summary(yyy))
+yyy2 = DOSE::setReadable(yyy, OrgDb = 'org.At.tair.db', keytype="TAIR")
+head(summary(yyy2))
+# clusterProfiler Visualization
+barplot(ego, showCategory=8)
+dotplot(ego)
+enrichMap(ego)
+cnetplot(ego, categorySize="pvalue", foldChange=geneList)
+plotGOgraph(ego)
+
+
+# and to file
+grDevices::pdf("results/cP_ego_barplot.pdf")
+barplot(ego, showCategory=8)
+dev.off()
+grDevices::pdf("results/cP_ego_dotplot.pdf")
+dotplot(ego)
+dev.off()
+grDevices::pdf("results/cP_ego_enrichMap.pdf")
+enrichMap(ego)
+dev.off()
+grDevices::pdf("results/cP_ego_cnetplot.pdf")
+cnetplot(ego, categorySize="pvalue", foldChange=geneList)
+dev.off()
+grDevices::pdf("results/cP_ego_plotGOgraph.pdf")
+plotGOgraph(ego)
+dev.off()
 
 ```
 ```{r try.clusterProfiler.pdf.pg12.enrichKEGG, eval=T}
@@ -720,15 +878,39 @@ head(yy)
 ## Not run:
 data(geneList)
 de <- names(geneList)[1:100]
-yy <- enrichKEGG(de, pvalueCutoff=0.01)
+de <- names(geneList)
+de
+geneList
+yy <- enrichKEGG(de, qvalueCutoff=1, pvalueCutoff=1)
+eKEGG = yy
 head(yy)
-plot(yy) # where does this output to?
+# plot(yy) # where does this output to? # needs X11
+# grDevices::pdf("results/cP_eKEGG_plot.pdf")
+# plot(eKEGG) # made a blank page, nothing to plot in eKEGG, error in knit - needs finite xlim
+# dev.off()
 ## End(Not run)
+
+# my code
+load(file="descv.RData")
+length(names(descv))
+de = names(descv)[1:100]
+de = names(descv)
+de
+if (length(de) == 100) {
+	Cutoff = 1.0
+} else {
+	Cutoff = 0.01 # try 1.0 if needed
+}
+Cutoff
+yyy = clusterProfiler::enrichKEGG(de, organism='ath',  pvalueCutoff=Cutoff, qvalueCutoff=Cutoff)
+head(summary(yyy))
+yyy2 = DOSE::setReadable(yyy, OrgDb = 'org.At.tair.db', keytype="TAIR")
+head(summary(yyy2))
 
 
 ```
-```{r try.clusterProfiler.pdf.pg16.groupGO, eval=T}
-# takes time :30
+```{r try.clusterProfiler.pdf.pg16.groupGO, eval=doallCPchunks}
+# takes time 2:00 
 
 ## Not run:
 data(gcSample)
@@ -736,6 +918,45 @@ yy <- groupGO(gcSample[[1]], 'org.Hs.eg.db', ont="BP", level=2)
 head(summary(yy))
 #plot(yy)
 
+# my code
+# get edgeDF from line 518 above
+edgeDF <- read.delim("results/edgeRglm_allcomp.xls", row.names=1, check.names=FALSE) 
+str(edgeDF)
+summary(edgeDF)
+head(edgeDF)
+# get the DEGlist from line 626 above
+load("data/GO/catdb.RData")
+DEG_list <- filterDEGs(degDF=edgeDF, filter=c(Fold=2, FDR=50), plot=FALSE)
+str(DEG_list) # Actual DEG_list
+DEG_list
+up_down <- DEG_list$UporDown; names(up_down) <- paste(names(up_down), "_up_down", sep="")
+str(up_down) # list of up_down's for 9 CMP's
+up_down
+up <- DEG_list$Up; names(up) <- paste(names(up), "_up", sep="")
+up
+down <- DEG_list$Down; names(down) <- paste(names(down), "_down", sep="")
+down
+DEGlist <- c(up_down, up, down)
+str(DEGlist) # now list of 27
+DEGlist
+DEGlist <- DEGlist[sapply(DEGlist, length) > 0]
+str(DEGlist) # now list of 19 (blanks are gone)
+DEGlist
+load(file="DEGlist.RData")
+str(DEGlist) # now list of 19 (blanks are gone)
+
+yyyyBP <- clusterProfiler::groupGO(DEGlist[[1]], OrgDb = 'org.At.tair.db', keytype="TAIR", ont="BP", level=2)
+ggo = yyyyBP
+head(summary(yyyyBP))
+yyyyCC <- clusterProfiler::groupGO(DEGlist[[1]], OrgDb = 'org.At.tair.db', keytype="TAIR", ont="CC", level=2)
+head(summary(yyyyCC))
+yyyyMF <- clusterProfiler::groupGO(DEGlist[[1]], OrgDb = 'org.At.tair.db', keytype="TAIR", ont="MF", level=2)
+head(summary(yyyyMF))
+# clusterProfiler Visualization
+barplot(ggo, drop=TRUE, showCategory=12)
+grDevices::pdf("results/cP_ggo_barplot.pdf")
+barplot(ggo, drop=TRUE, showCategory=12)
+dev.off()
 ## End(Not run)
 
 
