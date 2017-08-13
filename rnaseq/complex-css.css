@@ -1,9 +1,9 @@
-If have internet
-@import url("http://fonts.googleapis.com/css?family=Roboto");
+/*If have internet
+/*@import url("http://fonts.googleapis.com/css?family=Roboto");
 
 /* Slide Titles */
 h1 {
-    color: white;
+    color: blue;
     margin-top: 100px;
     text-align: center;
     padding-top: 100;
@@ -24,9 +24,10 @@ p {
 
 body
 {
-  color: white;
+  color: black;
   background-color: #4285F4;
-  font-family: 'Roboto', sans-serif;
+  background-color: #E6EEFF;
+  /*font-family: 'Roboto', sans-serif;*/
 }
 
 #nextsteps {
@@ -36,6 +37,13 @@ body
 .emphasized {
    font-size: 1.2em;
 }
+.co {
+   font-size: 1.0em; ! make comment bigger
+}
+.kw {
+   font-size: 1.0em; ! make variable and function names bigger
+}
+
 
 
 html {

@@ -3,9 +3,11 @@ title: "Gene Set Enrichment for Next Generation Sequencing Analysis"
 subtitle: "(using R Markdown for Reproducible Research)"
 author: "Gordon David Mosher and Thomas Girke"
 date: "8/01/2017"
-output: slidy_presentation
-duration: 7
-# css: "complex-css.css" ## mimic google slides from Lynda, font s/b smaller
+output:
+  slidy_presentation:
+    duration: 7
+    footer: "Copyright (c) 2017"
+css: "complex-css.css" ## mimic google slides from Lynda, font s/b smaller
 # css: "slidy.css" ## looked the same as none
 # css: "w3c-blue.css" ## lost titles? same color as page
 ---
@@ -60,8 +62,16 @@ To efficiently apply GSE to NGS we can take an existing automated workflow envir
 
 ![](GenomeAnnotation.PNG)
 
-## My Code - integrates the clusterProfiler enrichment process with the systemPipeR workflow.
+## My Code - integrates the clusterProfiler enrichment process with the systemPipeR workflow. 
 
+<style>
+div.font_em pre.r { font-size: 1.1em; }
+div.font_em pre { font-size: 1.0em; }
+</style>
+<!####hello{.smaller}>
+####hello
+<>
+<div class = "font_em">
 ```{r clusterProfiler.enrichGO, eval=F, echo=TRUE}
 # my code
 load(file="descv.RData")
@@ -72,16 +82,18 @@ if (length(de) == 100) {
 	Cutoff = 0.55
 }
 Cutoff
-ego = clusterProfiler::enrichGO(de, OrgDb = 'org.At.tair.db', keytype="TAIR", ont="MF", pAdjustMethod = "BH", qvalueCutoff=Cutoff, pvalueCutoff=Cutoff)
+ego = clusterProfiler::enrichGO(de, OrgDb = 'org.At.tair.db', keytype="TAIR", ont="MF",
+                                pAdjustMethod = "BH", qvalueCutoff=Cutoff, pvalueCutoff=Cutoff)
 ego@result[,c(1:7,9)]
 ego2 = DOSE::setReadable(yyy, OrgDb = 'org.At.tair.db', keytype="TAIR")
 str(ego2)
 save(ego, file="ego.RData") # save for clusterProfiler visualization
 ```
-
-
+</br>
+</div class>
 ## My Results - of the Enrichment Process
 
+<div class = "font_em">
 ```{r clusterProfiler.ego.Result, eval=TRUE, echo=TRUE}
 # getwd()
 if (substr(getwd(),nchar(getwd())-5,nchar(getwd())) != "rnaseq") {
@@ -90,7 +102,7 @@ if (substr(getwd(),nchar(getwd())-5,nchar(getwd())) != "rnaseq") {
 load("ego.RData")
 ego@result[,c(1:7,9)]
 ```
-
+</div class>
 ## My Visualization - of the Enrichment Results (ego)
 
 ```{r clusterProfiler.ego.Visualization, eval=TRUE, message=FALSE}
