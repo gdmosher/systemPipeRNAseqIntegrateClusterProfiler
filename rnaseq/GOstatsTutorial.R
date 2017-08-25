@@ -2,6 +2,16 @@
 ## http://manuals.bioinformatics.ucr.edu/home/R_BioCondManual#TOC-Gene-Ontologies
 ##
 
+## Code from man phyper
+## (2017-0813 22:30 paste code to calculate hypergeometric distribution in R)
+m <- 10; n <- 7; k <- 8
+x <- 0:(k+1)
+rbind(phyper(x, m, n, k), dhyper(x, m, n, k))
+all(phyper(x, m, n, k) == cumsum(dhyper(x, m, n, k)))  # FALSE
+## but error is very small:
+signif(phyper(x, m, n, k) - cumsum(dhyper(x, m, n, k)), digits = 3)
+
+
 ## This code was included to debug X11 issues on 2017-0806
 ## from same manual, see Bar Plots - Base Graphics
 ##

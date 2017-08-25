@@ -44,7 +44,15 @@ body
    font-size: 1.0em; ! make variable and function names bigger
 }
 
-
+.col-wrapper{width:1500px; margin:0;}
+.col{margin:0 10px; float:left; display:inline;}
+.col-670{width:55%;}
+/* my laptop screen is 20 fingers wide, so 5% is one finger */
+.col-250{width:35%;}
+/*.col-wrapper{width:960px; margin:0 auto;}
+/*.col{margin:0 10px; float:left; display:inline;}
+/*.col-670{width:670px;}
+/*.col-250{width:250px;}
 
 html {
   height: 100%;

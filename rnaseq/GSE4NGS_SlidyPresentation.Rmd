@@ -1,8 +1,8 @@
 ---
-title: "Gene Set Enrichment for Next Generation Sequencing Analysis"
-subtitle: "(using R Markdown for Reproducible Research)"
-author: "Gordon David Mosher and Thomas Girke"
-date: "8/01/2017"
+title: "Integrating Novel Functional Annotations </br> and Enrichment Methods for Gene Sets </br> in NGS Analysis Workflows"
+# subtitle: " in Next Generation Sequencing Analysis Workflow"
+author: "Gordon David Mosher and Thomas Girke </br> University of California, Riverside"
+# date: "8/31/2017"
 output:
   slidy_presentation:
     duration: 7
@@ -13,60 +13,80 @@ css: "complex-css.css" ## mimic google slides from Lynda, font s/b smaller
 ---
 
 ```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, results = 'markup', warning = TRUE, message = TRUE, fig.path = 'KnitrImages/', comment = NA, background = '#F2F5F9', results = 'hold')
 knitr::opts_chunk$set(echo = FALSE)
 
 ```
 
-## Introduction / Overview
+## Introduction to Bioinformatics Terminology Utilized
+<br>
+</br>
 
-Our research focuses on the need to easily interpret the massive amount of data currently being produced by Next Generation Sequencing (NGS). This is done by integrating various tools into a workflow to produce reproducible research.
+- Next Generation Sequencing
+    - is a LOW COST high-throughput DNA/RNA sequencing technology
+    - counting these genes gives differentially expressed gene (DEG) lists for enrichment
 
-### Hello
+- Enrichment Methods
+    - identify sets of genes that are over-represented in a large set of genes
 
-#### Fouth level.
+- Functional Annotation
+    - means adding a note specifying what a gene's function is
+    - helps understand how a cell/tissue responds to a treatment or disease
 
-knitr::opts_chunk$set(echo = TRUE, results = 'markup', warning = TRUE, message = TRUE, fig.path = 'KnitrImages/', comment = NA, background = '#F2F5F9', results = 'hold')
-
-
-## Next Generation Sequencing - Produces an enormous amount of data for analysis.
-
-Define and demonstrate importance.
-
-## R Markdown by RStudio - Makes Reproducible Research
-
-This is an R Markdown presentation. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>. It's free. You can learn the basics in a single afternoon on your own.
-
-## Gene Set Enrichment - annotates the genes three ways.
-
-GSE tools apply annotation information from online databases like Gene Ontology (GO). New information is added by thousands of users everyday that relates functional and structural purpose to the genes. Another online database the Disease Ontology (DO) relates disease information to the genes.
-
-These growing big data resources are making GSE more powerful and important in diagnosing proper function of cellular tissue.
-
-The word ontology means ...
-
-- MF is Molecular Function
-- BP is Biological Process
-- CC is Cellular something
-
-## Research Question:
-
-### What is an efficient way to apply Gene Set Enrichment to Next Generation Sequencing?
-
-To efficiently apply GSE to NGS we can take an existing automated workflow environment and then integrate a Gene Set Enrichment tool.
-
-## 'systemPipeR' - provides the automated workflow environment.
-
+## Introduction to systemPipeR </br> <small>an NGS Analysis Workflow Pipeline </small>
+<div align="center">
 ![](systemPipeR.PNG)
+</div>
+- Start with your fastq files from the NGS sequencing.  
+- Select a param file for each step in your workflow. (trimming, alignment, counting DEGs)  
+- Choose which enrichment and annotation steps you want to include.  
+- Submit the job!
 
-## 'clusterProfiler' - attaches Gene Set Enrichment Annotations to the NGS Reads
+## The Problem
+<br>
+</br>
 
-![](GenomeAnnotation.PNG)
+- Currently, enrichment analysis
+    - is made difficult by too many tools requiring computational expertise
+    - is laborious to adjust the data format for each step
+    - is time consuming to manually process all the steps
+<br>
+</br>
 
-## My Code - integrates the clusterProfiler enrichment process with the systemPipeR workflow. 
+#### This has created a demand for easy to use workflows
+
+## Objective
+<div align="center">
+
+#### <big>To integrate several statistical enrichment tests </br> and functional annotation systems </br> into the systemPipeR NGS workflow environment </big>
+</div>
+</br>
+
+<div class="col-wrapper">
+<div class="col col-270">
+
+- Chosen statistical methods
+    - GSEA statistical test
+    - hypergeometric tests
+$$ p = \sum_{k=x}^{n} \frac { {D \choose k}{N-D \choose n-k} }{N \choose n}$$
+</div>
+<div class="col col-450">
+
+- Chosen functional annotation systems
+    - Gene Ontology (GO)
+        - MF is Molecular Function
+        - BP is Biological Process
+        - CC is Cellular Component
+    - KEGG pathways (Kyoto Encyclopedia of Genes and Genomes)
+    - Disease Ontology (DO)
+</div>
+</div>
+
+## Custom code integrates an enrichment process with the systemPipeR workflow. 
 
 <style>
-div.font_em pre.r { font-size: 1.1em; }
-div.font_em pre { font-size: 1.0em; }
+div.font_em pre.r { font-size: 80%; }
+div.font_em pre { font-size: 90%; }
 </style>
 <!####hello{.smaller}>
 ####hello
@@ -89,9 +109,11 @@ ego2 = DOSE::setReadable(yyy, OrgDb = 'org.At.tair.db', keytype="TAIR")
 str(ego2)
 save(ego, file="ego.RData") # save for clusterProfiler visualization
 ```
-</br>
 </div class>
-## My Results - of the Enrichment Process
+- A call to an enrichment function demonstrates how input parameters are read from the disk, processed, and then written back to disk to be used later for graphing and reporting.
+- End-users are not concerned with this level. Instead, they simply choose what steps to process.
+
+## Tabular Results of the Enrichment Process
 
 <div class = "font_em">
 ```{r clusterProfiler.ego.Result, eval=TRUE, echo=TRUE}
@@ -100,13 +122,20 @@ if (substr(getwd(),nchar(getwd())-5,nchar(getwd())) != "rnaseq") {
   setwd("rnaseq")
 }
 load("ego.RData")
-ego@result[,c(1:7,9)]
+# ego@result[,c(1:7,9)]
+ego@result[,c(2:3,5)]
 ```
 </div class>
-## My Visualization - of the Enrichment Results (ego)
+- A sample data frame, showing the results of the enrichment, demonstrates tabular data used for graphing, reporting, and interpretation. Data is easily imported and exported to Excel.
+- Again, end-users simply choose which reports to prepare.
 
-```{r clusterProfiler.ego.Visualization, eval=TRUE, message=FALSE}
-library("clusterProfiler")
+## Visualization of the Enrichment Results
+
+<div class="col-wrapper">
+<div class="col col-670">
+```{r clusterProfiler.ego.Visualization, eval=T, warning=FALSE, message=FALSE}
+library("DOSE", quietly = TRUE)
+library("clusterProfiler", quietly = TRUE)
 load("ego.RData")
 # clusterProfiler Visualization
 #barplot(ego, showCategory=8)
@@ -116,57 +145,88 @@ dotplot(ego)
 #plotGOgraph(ego)
 ```
 
-## My Visualization - of the Enrichment Results (ggo)
+</div>
+<div class="col col-250">
+<br>
+</br>
 
-```{r clusterProfiler.ggo.Visualization, eval=T}
+- This graph shows the Gene Ratio plotted against the GO terms. The dot size represents the count of the genes in each term and the color depicts the significance.
+
+- The R language makes using four dimensional charts like this easy, and significantly increases the interpretability of the data.
+
+</div>
+</div>
+
+## Visualization of the Enrichment Results
+
+<div class="col-wrapper">
+<div class="col col-670">
+```{r clusterProfiler.ggo.Visualization, eval=T, message=FALSE}
 load("ggo.RData")
 # clusterProfiler Visualization
 barplot(ggo, drop=TRUE, showCategory=12)
 ```
 
-## GO Slim Barplot for MF Ontology
+</div>
+<div class="col col-250">
+<br>
+</br>
 
+- This graph shows how many clusters of DEGs were assigned to each GO term. The graph was filtered to only show a single category.
+
+<!- Visualization of the results makes interpretation easier.>
+<>
+
+</div>
+</div>
+
+## GO Slim Barplot for Molecular Function (MF) Ontology
+
+<div class="col-wrapper">
+<div class="col col-600">
 ![](results/GOslimbarplotMF.png)
 <div align="center">Figure 5: GO Slim Barplot for MF Ontology</div></br>
 
+</div>
+<div class="col col-250">
+
+- Finally, we have selected the most important terms for comparison. Each GO term contains a staggered barplot comparing the various treatments selected. From this view, a researcher or medical professional has a clear overview of the results from which to proceed to interpretation.
+
+- Good graphics enable quick and accurate interpretation.
+
+</div>
+</div>
+
+
 ## Conclusion
 
-### Summary
+- Benefits
+    - You simply choose the steps!
+        - saves time, less mistakes, less trained people can do it
 
-Integrating the Gene Set Enrichment tool 'clusterProfiler' in the automated workflow 'systemPipeR' creates an efficient way to apply Gene Set Enrichment to Next Generation Sequencing (NGS) data. Using R and R Markdown qualifies it as reproducible research.
+- Summary
+    - Integrated Gene Set Enrichment into NGS workflow.
+    - Included visualizations to assist in interpretation of the results.
+    - Provided automated end-to-end gene set enrichment analysis, thus helping researchers obtain results more quickly.
 
-### Review
+-  Next steps
+    - It is important to continue updating the workflows and analyses as new discoveries and methods arise.
 
-By writing the code to integrate the 'clusterProfiler' and 'systemPipeR' I was able to create the annotation data and the visualizations to efficiently interpret the results.
+## Acknowledgements {.smaller}
 
-### Next steps
+### Funding by ![](MARC-U-STAR.png) ![](NIHlogo_long.jpg) 
 
-Both NGS and GSE are young technologies. It is important to continue updating the workflows and analyses as new discoveries and methods arise.
+#### MARC-U-STAR - Program Director - Dr. Ernest Martinez  
+<hr>
 
-## Acknowledgements
+#### Girke Lab, University of California, Riverside ![](UCRlogo_long.png)  
 
-### Funding Provided by
+#### Primary Investigator - Thomas Girke, Department of Botany and Plant Science
+<hr>
 
-National Institute of Health under grant ##
+Presentation Review - Pedro Rodrigues, University of Sao Paulo, Brazil  
+Technical Assistance - Neerja, Jordan, Charles and Austin  
+Lab Mates - Jianhai, Yuzhu
+<hr>
 
-### MARC-U-STAR  
-
-PI - Dr. Ernest Martinez
-
-### Girke Lab
-
-PI - Thomas Girke, Department of Botany and Plant Science, University of California, Riverside.
-
-Technical Assistance from Neerja, Jordan, Charles and Austin.
-
-Lab Mates: Jianhai, Yuzhu
-
-### Citations:
-
-G Yu, LG Wang, Y Han, QY He. clusterProfiler: an R package for comparing biological themes among gene clusters. OMICS: A Journal of Integrative Biology 2012, 16(5):284-287. doi:[10.1089/omi.2011.0118](http://dx.doi.org/10.1089/omi.2011.0118)
-
-systemPipeR: NGS workflow and report generation environment
-Tyler W. H. Backman and Thomas GirkeEmail authorView ORCID ID profile
-BMC BioinformaticsBMC series – open, inclusive and trusted201617:388
-https://doi.org/10.1186/s12859-016-1241-0©  The Author(s) 2016
-
+#### This is reproducible research; an R Markdown presentation. See <http://rmarkdown.rstudio.com>.
