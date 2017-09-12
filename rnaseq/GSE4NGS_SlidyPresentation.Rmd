@@ -19,12 +19,13 @@ knitr::opts_chunk$set(echo = FALSE)
 ```
 
 ## Introduction to Bioinformatics Terminology Utilized
-<br>
-</br>
+<div align="center">
+![](NGS_resize80x30percent.jpg)
+</div>
 
-- Next Generation Sequencing
+- Next Generation Sequencing (NGS)
     - is a LOW COST high-throughput DNA/RNA sequencing technology
-    - counting these genes gives differentially expressed gene (DEG) lists for enrichment
+    - counting reads that overlap genes gives differentially expressed gene (DEG) lists for enrichment
 
 - Enrichment Methods
     - identify sets of genes that are over-represented in a large set of genes
@@ -38,8 +39,10 @@ knitr::opts_chunk$set(echo = FALSE)
 ![](systemPipeR.PNG)
 </div>
 - Start with your fastq files from the NGS sequencing.  
-- Select a param file for each step in your workflow. (trimming, alignment, counting DEGs)  
+- Select a param file for each step in your workflow.
+    - trimming, alignment, counting DEGs (differentially expressed genes)
 - Choose which enrichment and annotation steps you want to include.  
+    - enrichGO(), enrichmap()
 - Submit the job!
 
 ## The Problem
@@ -58,29 +61,63 @@ knitr::opts_chunk$set(echo = FALSE)
 ## Objective
 <div align="center">
 
-#### <big>To integrate several statistical enrichment tests </br> and functional annotation systems </br> into the systemPipeR NGS workflow environment </big>
+#### <big>To integrate several statistical enrichment tests and functional annotation systems into the systemPipeR NGS workflow environment </big>
 </div>
-</br>
 
 <div class="col-wrapper">
 <div class="col col-270">
 
 - Chosen statistical methods
-    - GSEA statistical test
-    - hypergeometric tests
+- GSEA statistical test
+    
+<div align="center">
+![](Kolmogorov-Smirnov.jpg)
+</div>
+
+- hypergeometric tests
 $$ p = \sum_{k=x}^{n} \frac { {D \choose k}{N-D \choose n-k} }{N \choose n}$$
 </div>
-<div class="col col-450">
+<div class="col col-270">
+
+&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;
+
+</div>
+<div class="col col-450 float:right">
 
 - Chosen functional annotation systems
+    - Disease Ontology (DO)
     - Gene Ontology (GO)
         - MF is Molecular Function
         - BP is Biological Process
         - CC is Cellular Component
     - KEGG pathways (Kyoto Encyclopedia of Genes and Genomes)
-    - Disease Ontology (DO)
+
+<div align="center">
+![](KEGG.jpg)
+</div>
+
 </div>
 </div>
+
+## Results
+
+- added about 300 lines of code to an instance of systemPipeRNAseq
+- integrated new annotation and enrichment functions from G. Yu's clusterProfiler
+    - CompareClusters(DEGlist,
+    - enrichGO(names(descv),
+    - enrichKEGG(names(descv),
+    - groupGO(DEGlist,
+- visualizations include
+    - DOSE::barplot(ego,
+    - dotplot(ego,
+    - enrichmap(ego,
+    - cnetplot(ego,
+    - plotGOgraph(ego,
+
+#### The next 4 slides are examples of the work that I've done in R-Markdown
+
+<!    - DOSE::barplot(ggo,>
+<>
 
 ## Custom code integrates an enrichment process with the systemPipeR workflow. 
 
@@ -164,7 +201,7 @@ dotplot(ego)
 ```{r clusterProfiler.ggo.Visualization, eval=T, message=FALSE}
 load("ggo.RData")
 # clusterProfiler Visualization
-barplot(ggo, drop=TRUE, showCategory=12)
+barplot(ggo, drop=TRUE, x="Count", showCategory=12)
 ```
 
 </div>
@@ -172,7 +209,7 @@ barplot(ggo, drop=TRUE, showCategory=12)
 <br>
 </br>
 
-- This graph shows how many clusters of DEGs were assigned to each GO term. The graph was filtered to only show a single category.
+- This graph shows how many clusters of DEGs were assigned to each GO term.
 
 <!- Visualization of the results makes interpretation easier.>
 <>
@@ -200,17 +237,22 @@ barplot(ggo, drop=TRUE, showCategory=12)
 
 ## Conclusion
 
-- Benefits
-    - You simply choose the steps!
-        - saves time, less mistakes, less trained people can do it
-
 - Summary
     - Integrated Gene Set Enrichment into NGS workflow.
     - Included visualizations to assist in interpretation of the results.
     - Provided automated end-to-end gene set enrichment analysis, thus helping researchers obtain results more quickly.
 
+- Benefits
+    - You simply choose the steps!
+        - saves time, less mistakes, less trained people can do it
+
 -  Next steps
-    - It is important to continue updating the workflows and analyses as new discoveries and methods arise.
+    - Integrate these new features into the systemPipeR library
+    - update workflows and analyses as new discoveries and methods arise
+
+#### This is reproducible research; an R Markdown presentation. See <http://rmarkdown.rstudio.com>.
+
+#### My code is hosted at <https://github.com/gdmosher/systemPipeRNAseqIntegrateClusterProfiler> where you can download and use it!
 
 ## Acknowledgements {.smaller}
 
@@ -221,12 +263,10 @@ barplot(ggo, drop=TRUE, showCategory=12)
 
 #### Girke Lab, University of California, Riverside ![](UCRlogo_long.png)  
 
-#### Primary Investigator - Thomas Girke, Department of Botany and Plant Science
+#### Primary Investigator - Thomas Girke, Professor of Bioinformatics, Department of Botany and Plant Sciences
 <hr>
 
 Presentation Review - Pedro Rodrigues, University of Sao Paulo, Brazil  
 Technical Assistance - Neerja, Jordan, Charles and Austin  
 Lab Mates - Jianhai, Yuzhu
 <hr>
-
-#### This is reproducible research; an R Markdown presentation. See <http://rmarkdown.rstudio.com>.

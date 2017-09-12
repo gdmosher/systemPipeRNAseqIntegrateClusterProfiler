@@ -62,6 +62,7 @@ system("echo HOSTNAME HOSTNAME HOSTNAME HOSTNAME HOSTNAME HOSTNAME HOSTNAME")
 system("hostname") # should return name of a compute node starting with i or c 
 getwd() # checks current working directory of R session
 dir() # returns content of current working directory
+readline("Press <Enter> to continue.")
 ```
 ```{r r_environment2, eval=F}
 sort( sapply(ls(),function(x){object.size(get(x))}))
@@ -968,7 +969,7 @@ save(ggo, file="ggo.RData") # save for clusterProfiler visualization
 ```{r clusterProfiler.ggo.Visualization, eval=T}
 load("ggo.RData")
 # clusterProfiler Visualization
-barplot(ggo, drop=TRUE, showCategory=12)
+DOSE::barplot(ggo, drop=TRUE, showCategory=12)
 grDevices::pdf("results/cP_ggo_barplot.pdf")
 barplot(ggo, drop=TRUE, showCategory=12)
 dev.off()
