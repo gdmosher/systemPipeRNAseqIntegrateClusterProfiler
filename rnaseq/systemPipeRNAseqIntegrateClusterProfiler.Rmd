@@ -35,7 +35,7 @@ knitr::opts_chunk$set(
 doallchunks = TRUE # 2017-0731 now 24m (17 real) on intel partition with ALL chunks on, 245 pages
 doallchunks = FALSE
 doallCPchunks = TRUE # if only doall, takes 11m, 126 pages
-#doallCPchunks = FALSE
+doallCPchunks = FALSE
 doallClusterRunchunks = TRUE
 doallClusterRunchunks = FALSE
 # cat <- function(...) {} # use this to disable all cat() calls below (for windows)
@@ -88,6 +88,7 @@ suppressPackageStartupMessages({
     library(ape)
     library(clusterProfiler)
 })
+library(DOSE)
 ```
 Note: the most recent version of this tutorial can be found <a href="https://htmlpreview.github.io/?https://github.com/tgirke/systemPipeR/blob/master/vignettes/systemPipeRNAseq.html">here</a> and a short overview slide show [here](https://htmlpreview.github.io/?https://github.com/tgirke/systemPipeR/master/inst/extdata/slides/systemPipeRslides.html).
 
@@ -153,7 +154,8 @@ NOTE: chunks node_environment and r_environment were here,
 ## Required packages and resources
 
 The `systemPipeR` package needs to be loaded to perform the analysis steps shown in
-this report [@H_Backman2016-bt].  ```{r load_systempiper, eval=TRUE}
+this report [@H_Backman2016-bt].  
+```{r load_systempiper, eval=TRUE}
 library(systemPipeR)
 ```
 
@@ -508,6 +510,7 @@ targets <- utils::read.delim("targets.txt", comment="#")
 targets
 cmp <- systemPipeR::readComp(file="targets.txt", format="matrix", delim="-")
 cmp
+debug(run_edgeR)
 edgeDF <- systemPipeR::run_edgeR(countDF=countDF, targets=targets, cmp=cmp[[1]], independent=FALSE, mdsplot="")
 str(edgeDF)
 edgeDF
@@ -588,6 +591,104 @@ dev.off()
 
 # (7)GO term enrichment analysis
 
+```{r include_systemPipeR, eval=TRUE}
+library(GO.db)
+library(AnnotationDbi)
+source("../../systemPipeR/R/AllClasses.R")
+source("../../systemPipeR/R/fastqQuality.R")
+source("../../systemPipeR/R/overLapper.R")
+source("../../systemPipeR/R/utilities.R")
+source("../../systemPipeR/R/geneSetAnalysis.R")
+.readGOorg <- function(myfile, colno, org) { 
+	# browser()
+	go_org <- read.delim(myfile, na.strings = "", header=FALSE, comment.char = "!", sep="\t")
+        go_org <- go_org[ , colno]
+        names(go_org) <- c("GOID", "GeneID", "GOCAT")
+	if(org == "Arabidopsis") {
+		go_org[,"GeneID"] <- gsub(".*(AT.G\\d\\d\\d\\d\\d).*", "\\1", as.character(go_org[,2]), perl=TRUE)
+        	go_org <- go_org[grep("^AT.G\\d\\d\\d\\d\\d", as.character(go_org$GeneID), perl=TRUE),]
+        	go_org <- go_org[!duplicated(paste(go_org[,"GOID"], gsub("\\.\\d{1,}", "", as.character(go_org[,"GeneID"]), perl=TRUE), sep="_")),]
+        }
+        go_org <- na.omit(go_org)
+	## Make GO cat labels consistent, e.g. from BioMart
+	gocat <- as.character(go_org$GOCAT)
+	gocat[gocat=="molecular_function"] <- "F"
+	gocat[gocat=="biological_process"] <- "P"
+	gocat[gocat=="cellular_component"] <- "C"
+	go_org[,"GOCAT"] <- gocat
+	## Split data frame by category
+        GO_MF_DF <- go_org[go_org[,3]=="F",]
+        GO_BP_DF <- go_org[go_org[,3]=="P",]
+        GO_CC_DF <- go_org[go_org[,3]=="C",]
+        
+	## Generates data frame (go_df) containing the commonly used components for all GO nodes: GOID, GO Term and Ontology Type. This step is only required if "go_df" hasn't been imported with the above load() function.
+	go_df <- data.frame(GOID=names(Term(GOTERM)), Term=Term(GOTERM), Ont=Ontology(GOTERM))
+        go_df <- na.omit(go_df) 
+	
+	## Return results
+	dflist <- list(D_BP=GO_BP_DF, D_CC=GO_CC_DF, D_MF=GO_MF_DF, GO_DF=go_df)
+	return(dflist)
+}
+.gene2GOlist <- function(catdf, rootUK=FALSE) { # If the argument 'rootUK' is set to TRUE then the root nodes are treated as terminal nodes to account for the new unknown terms 
+	# browser()
+        ## Import required data frames
+	GO_MF_DF <- catdf$D_MF
+        GO_BP_DF <- catdf$D_BP
+        GO_CC_DF <- catdf$D_CC
+       
+	## Populate each GO node with associated gene ids 
+	for(i in c("MF","BP","CC")) {
+                if(i=="MF") {
+                        go_offspr_list <- as.list(GOMFOFFSPRING) }
+                if(i=="BP") {
+                        go_offspr_list <- as.list(GOBPOFFSPRING) }
+                if(i=="CC") {
+                        go_offspr_list <- as.list(GOCCOFFSPRING) }
+                go_offspr_list <- lapply(go_offspr_list, unlist); go_offspr_list <- lapply(go_offspr_list, as.vector) # clean-up step for the list
+                go_offspr_list_temp <- lapply(names(go_offspr_list), function(x) c(x, go_offspr_list[[x]]) ) # include list component (GOID) names in corresponding (GOID) vectors
+                names(go_offspr_list_temp) <- names(go_offspr_list) # names list components after go_offspr_list
+                go_offspr_list <- go_offspr_list_temp
+                go_offspr_list <- lapply(go_offspr_list, function(x) x[!is.na(x)]) # remove NAs in vectors
+                
+		## Treat root nodes as terminal nodes to account for the new unknown terms. This step removes the offspring information from the root nodes.
+		if(rootUK==TRUE) {
+			if(i=="MF") { go_offspr_list[["GO:0003674"]] <- c("GO:0003674") } 
+			if(i=="BP") { go_offspr_list[["GO:0008150"]] <- c("GO:0008150") }
+			if(i=="CC") { go_offspr_list[["GO:0005575"]] <- c("GO:0005575") }
+		}
+
+		## Retrieve gene (affy) IDs for GOID vectors
+		if(i=="MF") {
+                        MF_node_gene_list <- lapply(go_offspr_list, function(x) unique(as.vector(GO_MF_DF[GO_MF_DF$GOID %in% x, 2]))) 
+                }
+		if(i=="BP") {
+                        BP_node_gene_list <- lapply(go_offspr_list, function(x) unique(as.vector(GO_BP_DF[GO_BP_DF$GOID %in% x, 2]))) 
+                }
+		if(i=="CC") {
+                        CC_node_gene_list <- lapply(go_offspr_list, function(x) unique(as.vector(GO_CC_DF[GO_CC_DF$GOID %in% x, 2])))  
+                }
+		cat("\n", paste("'", i, "_node_gene_list'", sep=""), "with gene-to-GO-OFFSPRING associations created.", "\n") 
+        }
+	node_gene_list <-list(L_BP=BP_node_gene_list, L_CC=CC_node_gene_list, L_MF=MF_node_gene_list)
+	return(node_gene_list)
+}
+makeCATdb <- function(myfile, lib=NULL, org="", colno = c(1,2,3), idconv=NULL, rootUK=FALSE) {
+	if(!is.null(lib) & !is.null(myfile)) stop("Arguments myfile and lib are exclusive. One of them needs to be assigned NULL.")
+	if(!is.null(lib)) {
+		catdf <- .sampleDFgene2GO(lib=lib)
+	}
+	if(!is.null(myfile)) {
+		catdf <- .readGOorg(myfile=myfile, org=org, colno=colno)
+	}
+	catlist <- .gene2GOlist(catdf=catdf, rootUK=rootUK)
+	catdblist <- c(catmap=list(catdf), catlist=list(catlist), idconv=list(idconv))
+	catdb <- as(catdblist, "catDB")
+	cat("\n", "makeCATdb successful.", "\n") 
+	return(catdb)
+}
+cat("Done\n") 
+```
+
 ## Obtain gene-to-GO mappings
 
 The following shows how to obtain gene-to-GO mappings from `biomaRt` (here for *A.
@@ -599,14 +700,14 @@ For each annotation this relatively slow preprocessing step needs to be
 performed only once. Subsequently, the preprocessed data can be loaded
 with the `load` function as shown in the next subsection.
 
-```{r get_go_annot, eval=doallchunks}
+```{r get_go_annot, eval=TRUE}
 # useMart() fails if mart is down for maintenance
 library("biomaRt")
 
 listMarts(host="plants.ensembl.org")
 m <- useMart("plants_mart", host="plants.ensembl.org")
 listDatasets(m)
-listDatasets(m)[44,]
+listDatasets(m)[45,] # athaliana_eg_gene
 m <- useMart("plants_mart", dataset="athaliana_eg_gene", host="plants.ensembl.org")
 listAttributes(m) # Choose data types you want to download
 go <- biomaRt::getBM(attributes=c("go_id", "tair_locus", "name_1006"), mart=m)
@@ -631,13 +732,17 @@ go[go[,3]=="molecular_function", 3] <- "F"; go[go[,3]=="biological_process", 3] 
 go[1:4,]
 
 }
+print(makeCATdb)
 dir.create("./data/GO")
 write.table(go, "data/GO/GOannotationsBiomart_mod.txt", quote=FALSE, row.names=FALSE, col.names=FALSE, sep="\t")
+debug(makeCATdb)
+debug(.gene2GOlist)
+debug(.readGOorg)
+# browser()
 catdb <- makeCATdb(myfile="data/GO/GOannotationsBiomart_mod.txt", lib=NULL, org="", colno=c(1,2,3), idconv=NULL)
 # makeCATdb() is part of systemPipeR::GOHyperGALL
-# source("../../systemPipeR/R/geneSetAnalysis.R")
-ls()
-print(makeCATdb)
+
+browser()
 catdb
 save(catdb, file="data/GO/catdb.RData")
 ```
@@ -659,6 +764,7 @@ BioMart.
 # takes time :45
 library("biomaRt")
 load("data/GO/catdb.RData")
+debug(filterDEGs)
 DEG_list <- filterDEGs(degDF=edgeDF, filter=c(Fold=2, FDR=50), plot=FALSE)
 str(DEG_list) # Actual DEG_list
 DEG_list
@@ -676,6 +782,7 @@ DEGlist <- DEGlist[sapply(DEGlist, length) > 0]
 str(DEGlist) # now list of 19 (blanks are gone)
 DEGlist
 save(DEGlist, file="DEGlist.RData") # save for clusterProfiler::compareClusters work
+debug(GOCluster_Report)
 BatchResult <- systemPipeR::GOCluster_Report(catdb=catdb, setlist=DEGlist, method="all", id_type="gene", CLSZ=2, cutoff=0.9, gocats=c("MF", "BP", "CC"), recordSpecGO=NULL)
 # GOCluster_Report is part of GOHyperGALL which is similar to GOstats::GOHyperG
 # GOCluster_Report is batch analysis of many gene sets
@@ -852,10 +959,12 @@ save(ego, file="ego.RData") # save for clusterProfiler visualization
 ```
 ```{r clusterProfiler.ego.Visualization, eval=T}
 load("ego.RData")
+data(geneList)
 # clusterProfiler Visualization
 barplot(ego, showCategory=8)
 dotplot(ego)
-enrichMap(ego)
+DOSE::enrichMap(ego) # will be removed in next version, use emapplot
+emapplot(ego)
 cnetplot(ego, categorySize="pvalue", foldChange=geneList)
 plotGOgraph(ego)
 
@@ -868,9 +977,9 @@ dev.off()
 grDevices::pdf("results/cP_ego_dotplot.pdf")
 dotplot(ego)
 dev.off()
-grDevices::pdf("results/cP_ego_enrichMap.pdf")
-enrichMap(ego)
-dev.off()
+#grDevices::pdf("results/cP_ego_enrichMap.pdf")
+#clusterProfiler::enrichMap(ego)
+#dev.off()
 grDevices::pdf("results/cP_ego_cnetplot.pdf")
 cnetplot(ego, categorySize="pvalue", foldChange=geneList)
 dev.off()
@@ -969,7 +1078,7 @@ save(ggo, file="ggo.RData") # save for clusterProfiler visualization
 ```{r clusterProfiler.ggo.Visualization, eval=T}
 load("ggo.RData")
 # clusterProfiler Visualization
-DOSE::barplot(ggo, drop=TRUE, showCategory=12)
+barplot(ggo, drop=TRUE, showCategory=12)
 grDevices::pdf("results/cP_ggo_barplot.pdf")
 barplot(ggo, drop=TRUE, showCategory=12)
 dev.off()
