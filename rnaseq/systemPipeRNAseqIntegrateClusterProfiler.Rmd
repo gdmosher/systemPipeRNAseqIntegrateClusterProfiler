@@ -1,6 +1,6 @@
 ---
 title: RNA-Seq Workflow Template 
-author: "First/last name (first.last@ucr.edu)"
+author: "Gordon Mosher (gmosh001@ucr.edu)"
 date: "Last update: `r format(Sys.time(), '%d %B, %Y')`" 
 output:
   html_document:
@@ -32,12 +32,19 @@ options(width=100, max.print=1000)
 knitr::opts_chunk$set(
     eval=as.logical(Sys.getenv("KNITR_EVAL", "TRUE")),
     cache=F) # as.logical(Sys.getenv("KNITR_CACHE", "TRUE")))
+
 doallchunks = TRUE # 2017-0731 now 24m (17 real) on intel partition with ALL chunks on, 245 pages
-doallchunks = FALSE
-doallCPchunks = TRUE # if only doall, takes 11m, 126 pages
-doallCPchunks = FALSE
+#doallchunks = FALSE
+FALSEdoallchunks = FALSE # place holder for doallchunks that is always FALSE
+
 doallClusterRunchunks = TRUE
-doallClusterRunchunks = FALSE
+#doallClusterRunchunks = FALSE
+FALSEdoallClusterRunchunks = FALSE # place holder for ... that is always FALSE
+
+doallCPchunks = TRUE # if only doall, takes 11m, 126 pages
+#doallCPchunks = FALSE
+FALSEdoallCPchunks = FALSE # place holder for ... that is always FALSE
+
 # cat <- function(...) {} # use this to disable all cat() calls below (for windows)
 displayKnitStatus <- function() {
 	system("echo HOSTNAME HOSTNAME HOSTNAME HOSTNAME HOSTNAME HOSTNAME HOSTNAME")
@@ -180,7 +187,7 @@ str(targets)
 targets
 # now look inside the fastq.gz file at the seq ID, sequence and quality data
 cat(system(paste0('gzip -cd ', targets[1,1], '.gz | head'), intern = T), sep = '\n')
-cat(system('ls -l data', intern = T), sep = '\n') # system output doesn't knit to html
+cat(system('ls -l data/', intern = T), sep = '\n') # system output doesn't knit to html
 cat(system('ls -l', intern = T), sep = '\n') # system output doesn't knit to html
 # dir()
 ```
@@ -200,13 +207,14 @@ The new targets file can be used for the next workflow step with an updated
 `SYSargs` instance, _e.g._ running the NGS alignments using the
 trimmed FASTQ files.
 
-```{r fastq_filter, eval=doallchunks}
-
+```{r fastq_filter, eval=FALSEdoallchunks}
+displayKnitStatus()
 cat(system(paste0('cat param/trim.param'), intern = T), sep = '\n')
 args <- systemArgs(sysma="param/trim.param", mytargets="targets.txt")
 args
 names(args); modules(args); cores(args); outpaths(args); sysargs(args)
 showClass("SYSargs")
+# next line takes approx 6 hours on alldata
 systemPipeR::preprocessReads(args=args, Fct="Biostrings::trimLRPatterns(Rpattern='GCCCGGGTAA', subject=fq)",
                 batchsize=100000, overwrite=TRUE, compress=TRUE)
 systemPipeR::writeTargetsout(x=args, file="targets_trim.txt", overwrite=TRUE)
@@ -224,7 +232,9 @@ diversity, length and occurrence distribution of reads, number of reads
 above quality cutoffs and mean quality distribution. The results are
 written to a PDF file named `fastqReport.pdf`.
 
-```{r fastq_report, eval=doallchunks}
+```{r fastq_report, eval=FALSEdoallchunks}
+displayKnitStatus()
+#knitr::knit_exit()
 cat(system(paste0('cat param/tophat.param'), intern = T), sep = '\n')
 cat(system(paste0('cat targets.txt'), intern = T), sep = '\n')
 args <- systemArgs(sysma="param/tophat.param", mytargets="targets.txt")
@@ -236,9 +246,11 @@ cores(args)
 outpaths(args)
 sysargs(args) # shows tophat calls
 sysargs(args)[1] # Command-line parameters for first FASTQ file
-cat('Next line takes time 6 minutes.\n') # takes 6 minutes
+cat('Next line takes time 6 minutes.\n') # takes 6 minutes, takes 25 min for alldata
+displayKnitStatus()
 fqlist <- systemPipeR::seeFastq(fastq=infile1(args), batchsize=100000, klength=8)
-save(fqlist, file="data/GO/fqlist.RData")
+displayKnitStatus()
+save(fqlist, file="data/GO/fqlist.RData")  # GO folder must exist or this fails
 load("data/GO/fqlist.RData")
 cat('fqlist is a Large list (18 * 9 elements, 1.3 Mb)\n')
 str(fqlist, max.level = 1)
@@ -270,11 +282,11 @@ pdf("./results/fastqReport.pdf", height=18, width=4*length(fqlist))
 systemPipeR::seeFastqPlot(fqlist)
 dev.off()
 # Neerja help me read/understand the pdf contents
+#knitr::knit_exit()
 ``` 
 
 ![](results/fastqReport.png)
 <div align="center">Figure 1: FASTQ quality report for 18 samples</div></br>
-
 
 # (4)Alignments
 
@@ -293,7 +305,8 @@ sysargs(args)[1] # Command-line parameters for first FASTQ file
 Submission of alignment jobs to compute cluster, here using 72 CPU cores
 (18 `qsub` processes each with 4 CPU cores).
 
-```{r tophat_alignment2, eval=doallClusterRunchunks}
+```{r tophat_alignment2, eval=FALSEdoallClusterRunchunks}
+displayKnitStatus()
 # ?moduleload
 # q
 args
@@ -317,7 +330,8 @@ sysargs(args) # shows tophat calls
 cat(system(paste0('cat .BatchJobs.R'), intern = T), sep = '\n')
 cat(system(paste0('cat slurm.tmpl'), intern = T), sep = '\n')
 reg <- systemPipeR::clusterRun(args, conffile=".BatchJobs.R", template="slurm.tmpl", Njobs=18, runid="01",
-                  resourceList=resources)
+                  resourceList=resources)  # takes about 63 min for alldata
+
 # creates results/star.tophat # do I want to look at these also?
 # don't submit for 20 hours on short-list!
 # 1 minute
@@ -328,6 +342,7 @@ waitForJobs(reg)
 ## Read mapping with `HISAT2`
 
 ```{r hisat_alignment2, eval=doallClusterRunchunks}
+displayKnitStatus()
 args <- systemArgs(sysma="param/hisat2.param", mytargets="targets.txt")
 cat(system(paste0('cat param/hisat2.param'), intern = T), sep = '\n')
 names(args)
@@ -345,7 +360,7 @@ cat(system(paste0('cat results/hisat2-build.out'), intern = T), sep = '\n')
 resources <- list(walltime="01:00:00", ntasks=1, ncpus=cores(args), memory="10G")
 resources
 reg <- clusterRun(args, conffile=".BatchJobs.R", template="slurm.tmpl", Njobs=18, runid="01",
-                  resourceList=resources)
+                  resourceList=resources)  # takes about 30 min for alldata
 # don't submit for 20 hours on short-list!
 # 1 minute
 reg
@@ -365,6 +380,7 @@ The following provides an overview of the number of reads in each sample
 and how many of them aligned to the reference.
 
 ```{r align_stats, eval=doallchunks}
+displayKnitStatus()
 read_statsDF <- systemPipeR::alignStats(args=args) 
 read_statsDF
 write.table(read_statsDF, "results/alignStats.xls", row.names=FALSE, quote=FALSE, sep="\t")
@@ -405,6 +421,7 @@ to separate files in the directory of this project. Parallelization is
 achieved with the `BiocParallel` package, here using 8 CPU cores.
 
 ```{r read_counting1, eval=T}
+displayKnitStatus()
 # uses >3GB memory
 library("GenomicFeatures"); library(BiocParallel)
 cat(system(paste0('head data/tair10.gff'), intern = T), sep = '\n')
@@ -423,15 +440,22 @@ bfl <- Rsamtools::BamFileList(outpaths(args), yieldSize=50000, index=character()
 bfl
 multicoreParam <- MulticoreParam(workers=2); register(multicoreParam); registered()
 multicoreParam
+#knitr::knit_exit()
+```
+```{r read_counting2, eval=FALSEdoallchunks} # was TRUE until 2019-0304
+displayKnitStatus()
+# takes about 30 min for alldata
 counteByg <- bplapply(bfl, function(x) GenomicAlignments::summarizeOverlaps(eByg, x, mode="Union", 
                                                ignore.strand=TRUE, 
                                                inter.feature=FALSE, 
                                                singleEnd=TRUE)) 
+displayKnitStatus()
 str(counteByg)
 counteByg
 countDFeByg <- sapply(seq(along=counteByg), function(x) SummarizedExperiment::assays(counteByg[[x]])$counts)
 str(countDFeByg)
 countDFeByg
+displayKnitStatus()
 rownames(countDFeByg) <- names(rowRanges(counteByg[[1]])); colnames(countDFeByg) <- names(bfl)
 rownames(countDFeByg)
 rpkmDFeByg <- apply(countDFeByg, 2, function(x) returnRPKM(counts=x, ranges=eByg))
@@ -762,6 +786,7 @@ BioMart.
 
 ```{r go_enrich, eval=doallchunks}
 # takes time :45
+displayKnitStatus()
 library("biomaRt")
 load("data/GO/catdb.RData")
 debug(filterDEGs)
@@ -808,6 +833,7 @@ single sample sets is achieved by subsetting the input data frame as
 shown in the first line of the following example.
 
 ```{r go_plot, eval=doallchunks}
+displayKnitStatus()
 load("data/GO/BatchResultslim.RData")
 gos <- BatchResultslim[grep("M6-V6_up_down", BatchResultslim$CLID), ]
 str(gos)
@@ -839,6 +865,8 @@ y
 pdf("heatmap1.pdf")
 pheatmap(y, scale="row", clustering_distance_rows="correlation", clustering_distance_cols="correlation")
 dev.off()
+#knitr::knit_exit()
+
 ```
 
 ![](results/heatmap1.png)
@@ -881,7 +909,7 @@ head(eg)
 # eg[1:10]
 ```
 
-```{r try.clusterProfiler.pdf.pg5.compareCluster, eval=doallCPchunks}
+```{r try.clusterProfiler.pdf.pg5.compareCluster, eval=FALSEdoallCPchunks}
 # takes time 5:00
 # still need to work on two formula interfaces
 displayKnitStatus()
@@ -922,7 +950,7 @@ as.data.frame(xxx)
 
 
 ```
-```{r try.clusterProfiler.pdf.pg11.enrichGO, eval=doallCPchunks}
+```{r try.clusterProfiler.pdf.pg11.enrichGO, eval=FALSEdoallCPchunks} # FALSE as of 2019-0304, I believe Yu changed his enrichGO(), error = unused arg (keytype="TAIR")
 # takes time 1:15
 displayKnitStatus()
 
@@ -949,8 +977,8 @@ yyy = clusterProfiler::enrichGO(de, OrgDb = 'org.At.tair.db', keytype="TAIR", on
 ego = yyy # ego is for visualization
 str(yyy)
 # yyy@result
-str(yyy@result)
-yyy@result[,c(1:7,9)]
+str(yyy@result)  # commented 2018-0620 no more slots on this object
+yyy@result[,c(1:7,9)]  # commented 2018-0620 no more slots on this object
 # head(summary(yyy))
 yyy2 = DOSE::setReadable(yyy, OrgDb = 'org.At.tair.db', keytype="TAIR")
 str(yyy2)
@@ -1027,8 +1055,9 @@ str(yyy2)
 
 
 ```
-```{r try.clusterProfiler.pdf.pg16.groupGO, eval=doallCPchunks}
+```{r try.clusterProfiler.pdf.pg16.groupGO, eval=FALSEdoallCPchunks} # FALSE as of 2019-0304, I believe Yu changed his groupGO(), error = unused arg (keytype="TAIR") 
 # takes time 2:00 
+displayKnitStatus()
 
 ## Not run:
 data(gcSample)
